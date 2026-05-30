@@ -1,0 +1,60 @@
+{
+  "reference_foods": [
+    {
+      "name": "白米饭（1碗）",
+      "calories": 230,
+      "protein": 4.5,
+      "fat": 0.5,
+      "carbohydrate": 50.0,
+      "sodium": 5
+    },
+    {
+      "name": "鸡胸肉（100g）",
+      "calories": 165,
+      "protein": 31.0,
+      "fat": 3.6,
+      "carbohydrate": 0,
+      "sodium": 74
+    },
+    {
+      "name": "西兰花（100g）",
+      "calories": 34,
+      "protein": 2.8,
+      "fat": 0.4,
+      "carbohydrate": 7.0,
+      "sodium": 33
+    },
+    {
+      "name": "苹果（1个）",
+      "calories": 95,
+      "protein": 0.5,
+      "fat": 0.3,
+      "carbohydrate": 25.0,
+      "sodium": 2
+    },
+    {
+      "name": "全麦面包（2片）",
+      "calories": 160,
+      "protein": 8.0,
+      "fat": 2.0,
+      "carbohydrate": 28.0,
+      "sodium": 280
+    },
+    {
+      "name": "鸡蛋（1个）",
+      "calories": 78,
+      "protein": 6.3,
+      "fat": 5.3,
+      "carbohydrate": 0.6,
+      "sodium": 62
+    }
+  ],
+  "daily_guidelines": {
+    "calories": {"sedentary_male": 2000, "active_male": 2500, "sedentary_female": 1600, "active_female": 2000},
+    "protein_g": {"min": 50, "recommended": 70, "max": 150},
+    "fat_g": {"min": 40, "recommended": 65, "max": 100},
+    "carbohydrate_g": {"min": 200, "recommended": 300, "max": 400},
+    "sodium_mg": {"recommended_max": 2000, "danger": 3000},
+    "weight_loss_deficit_kcal": 300
+  }
+}
