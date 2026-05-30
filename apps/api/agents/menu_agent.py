@@ -17,11 +17,18 @@ class MenuAgent(BaseAgent):
             stores = query_nearby_stores()
             source = "mock"
         else:
-            # Real MCP would go here
-            from services.mock_mcdonalds_mcp import list_nutrition_foods, query_nearby_stores
-            items = list_nutrition_foods()
-            stores = query_nearby_stores()
-            source = "mock_fallback"
+            # 使用真实 MCP
+            try:
+                from adk_app.mcp_tools import mcd_list_nutrition_foods, mcd_query_nearby_stores
+                items = await mcd_list_nutrition_foods()
+                stores = await mcd_query_nearby_stores()
+                source = "mcp"
+            except Exception as e:
+                # MCP 失败时回退到 mock
+                from services.mock_mcdonalds_mcp import list_nutrition_foods, query_nearby_stores
+                items = list_nutrition_foods()
+                stores = query_nearby_stores()
+                source = "mock_fallback"
 
         # Update candidates in context
         context["candidates"] = items
