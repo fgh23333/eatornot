@@ -48,9 +48,11 @@ class AutoDraftService:
         calorie_remaining = daily_target - total_calories
         money_remaining = user.daily_budget - total_spent
 
-        # 获取用户偏好
+        # 获取用户偏好和记忆
         preferences = await self.memory_service.get_preferences(user.user_id)
         patterns = await self.memory_service.get_meal_patterns(user.user_id)
+        taste_prefs = await self.memory_service.get_taste_preferences(user.user_id)
+        dietary_notes = []
 
         # 获取菜单
         menu_items = menu_service.list_nutrition_foods()
@@ -63,6 +65,7 @@ class AutoDraftService:
             money_budget=money_remaining,
             user=user,
             preferences=preferences,
+            taste_prefs=taste_prefs,
         )
 
         # 计算总价和营养
@@ -77,7 +80,8 @@ class AutoDraftService:
 
         # 生成理由
         reasons = self._generate_reasons(
-            selected_items, meal_type, user, calorie_remaining, money_remaining
+            selected_items, meal_type, user, calorie_remaining, money_remaining,
+            preferences, patterns, taste_prefs
         )
 
         return {
@@ -105,17 +109,34 @@ class AutoDraftService:
 
     def _select_items(self, menu_items: list, meal_type: str,
                        calorie_budget: float, money_budget: float,
-                       user: UserProfile, preferences: dict) -> list:
-        """根据约束选择菜品"""
+                       user: UserProfile, preferences: dict,
+                       taste_prefs: dict = None) -> list:
+        """根据约束选择菜品，利用记忆做个性化"""
         # 分类菜单
         mains = [i for i in menu_items if i.get("category") != "drink"]
         drinks = [i for i in menu_items if i.get("category") == "drink"]
 
-        # 根据用户目标排序
+        # 获取不喜欢的食物
+        avoided_items = preferences.get("avoided_items", [])
+
+        # 过滤掉不喜欢的食物
+        mains = [i for i in mains if i["name"] not in avoided_items]
+        drinks = [i for i in drinks if i["name"] not in avoided_items]
+
+        # 根据用户目标和口味偏好排序
         if user.goal.value == "lose_weight":
             mains.sort(key=lambda x: x["calories"])
         elif user.goal.value == "save_money":
             mains.sort(key=lambda x: x["price"])
+        elif taste_prefs:
+            # 根据口味偏好排序
+            flavor = taste_prefs.get("flavor_preference", "balanced")
+            if flavor == "spicy":
+                mains.sort(key=lambda x: x.get("tags", []).count("spicy"), reverse=True)
+            elif flavor == "fried":
+                mains.sort(key=lambda x: x.get("tags", []).count("fried"), reverse=True)
+            else:
+                mains.sort(key=lambda x: x.get("tags", []).count("popular"), reverse=True)
         else:
             # 按受欢迎程度排序
             mains.sort(key=lambda x: x.get("tags", []).count("popular"), reverse=True)
@@ -135,14 +156,21 @@ class AutoDraftService:
                 if len([i for i in selected if i.get("category") != "drink"]) >= 2:
                     break
 
-        # 选择饮料
-        if user.goal.value == "lose_weight":
-            # 减脂模式优先选择零糖饮料
+        # 选择饮料（根据口味偏好）
+        drink_preference = taste_prefs.get("drink_preference", "zero_sugar") if taste_prefs else "zero_sugar"
+
+        if drink_preference == "zero_sugar" or user.goal.value == "lose_weight":
+            # 优先选择零糖饮料
             zero_drinks = [d for d in drinks if "zero_sugar" in d.get("tags", [])]
             if zero_drinks and zero_drinks[0]["price"] <= remaining_money:
                 selected.append(zero_drinks[0])
+        elif drink_preference == "coffee":
+            # 优先选择咖啡
+            coffee_drinks = [d for d in drinks if "coffee" in d.get("tags", [])]
+            if coffee_drinks and coffee_drinks[0]["price"] <= remaining_money:
+                selected.append(coffee_drinks[0])
         else:
-            # 其他模式选择便宜的饮料
+            # 选择便宜的饮料
             cheap_drinks = sorted(drinks, key=lambda x: x["price"])
             if cheap_drinks and cheap_drinks[0]["price"] <= remaining_money:
                 selected.append(cheap_drinks[0])
@@ -150,8 +178,10 @@ class AutoDraftService:
         return selected
 
     def _generate_reasons(self, items: list, meal_type: str, user: UserProfile,
-                           calorie_remaining: float, money_remaining: float) -> list:
-        """生成推荐理由"""
+                           calorie_remaining: float, money_remaining: float,
+                           preferences: dict = None, patterns: dict = None,
+                           taste_prefs: dict = None) -> list:
+        """生成推荐理由，包含记忆参考"""
         reasons = []
 
         meal_cn = {"breakfast": "早餐", "lunch": "午餐", "dinner": "晚餐", "snack": "加餐"}.get(meal_type, meal_type)
@@ -167,6 +197,22 @@ class AutoDraftService:
 
         if total_price < money_remaining * 0.5:
             reasons.append("预算充裕，可以再加点什么")
+
+        # 添加记忆参考
+        if preferences:
+            avoided = preferences.get("avoided_items", [])
+            if avoided:
+                reasons.append(f"避开了你不喜欢的食物")
+
+        if patterns:
+            frequent = patterns.get("frequent_items", [])
+            if frequent:
+                reasons.append(f"参考了你常点的菜品")
+
+        if taste_prefs:
+            drink_pref = taste_prefs.get("drink_preference", "")
+            if drink_pref == "zero_sugar":
+                reasons.append("选择了零糖饮料")
 
         return reasons
 

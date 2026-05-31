@@ -15,6 +15,8 @@ from api.plan_routes import router as plan_router
 from api.dashboard_routes import router as dashboard_router
 from api.balance_routes import router as balance_router
 from api.draft_routes import router as draft_router
+from api.decision_routes import router as decision_router
+from api.reminder_routes import router as reminder_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -60,6 +62,8 @@ app.include_router(plan_router, prefix="/api", tags=["plan"])
 app.include_router(dashboard_router, prefix="/api", tags=["dashboard"])
 app.include_router(balance_router, prefix="/api", tags=["balance"])
 app.include_router(draft_router, prefix="/api", tags=["draft"])
+app.include_router(decision_router, prefix="/api", tags=["decision"])
+app.include_router(reminder_router, prefix="/api", tags=["reminder"])
 
 
 @app.get("/health")

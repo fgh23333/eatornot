@@ -28,6 +28,7 @@ import { ResetButtons } from './components/ResetButtons'
 import { TodayDashboard } from './components/TodayDashboard'
 import { BalanceMode } from './components/BalanceMode'
 import { AutoDraft } from './components/AutoDraft'
+import { ReminderCard } from './components/ReminderCard'
 
 // 应用阶段
 type AppPhase = 'mode_selection' | 'onboarding' | 'quick_form' | 'main_app'
@@ -288,6 +289,17 @@ export default function App() {
 
         {/* 中间：对话和推荐 */}
         <main className={`main-content ${mode === 'quick' ? 'full-width' : ''}`}>
+          {/* 提醒卡 */}
+          {mode === 'long_term' && profile && !recommendation && (
+            <ReminderCard
+              userId={profile.user_id}
+              onAccept={(reminder) => {
+                setInputValue('帮我搭配')
+                handleRecommend('帮我搭配')
+              }}
+            />
+          )}
+
           {/* 聊天消息 */}
           <ChatMessageList messages={chatMessages} />
 

@@ -237,6 +237,44 @@ export async function fetchDashboard(userId: string = 'demo-user'): Promise<any>
 }
 
 export async function fetchReminders(userId: string = 'demo-user'): Promise<any> {
-  const res = await fetch(`${BASE}/api/dashboard/reminders?user_id=${userId}`)
+  const res = await fetch(`${BASE}/api/reminders?user_id=${userId}`)
+  return res.json()
+}
+
+export async function acceptReminder(reminderId: string): Promise<any> {
+  const res = await fetch(`${BASE}/api/reminders/${reminderId}/accept`, {
+    method: 'POST',
+  })
+  return res.json()
+}
+
+export async function snoozeReminder(reminderId: string, minutes: number = 30): Promise<any> {
+  const res = await fetch(`${BASE}/api/reminders/${reminderId}/snooze?minutes=${minutes}`, {
+    method: 'POST',
+  })
+  return res.json()
+}
+
+export async function dismissReminder(reminderId: string): Promise<any> {
+  const res = await fetch(`${BASE}/api/reminders/${reminderId}/dismiss`, {
+    method: 'POST',
+  })
+  return res.json()
+}
+
+export async function mealDecision(request: {
+  user_id?: string
+  message?: string
+  trigger_type?: string
+  scenario?: string
+  trigger_reason?: string
+  suggested_action?: string
+  context?: Record<string, any>
+}): Promise<any> {
+  const res = await fetch(`${BASE}/api/decision`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  })
   return res.json()
 }

@@ -1970,6 +1970,96 @@ body {
   cursor: pointer;
 }
 
+/* ============ Reminder Cards ============ */
+.reminder-cards {
+  margin-bottom: 16px;
+}
+
+.reminder-card {
+  border-left: 3px solid var(--primary);
+  margin-bottom: 12px;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reminder-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.reminder-icon {
+  font-size: 1.2rem;
+}
+
+.reminder-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.reminder-message {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.reminder-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-reminder {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-reminder.accept {
+  background: var(--primary);
+  color: white;
+  border: none;
+}
+
+.btn-reminder.accept:hover {
+  background: var(--primary-hover);
+}
+
+.btn-reminder.snooze {
+  background: white;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-reminder.snooze:hover {
+  background: #f7fafc;
+}
+
+.btn-reminder.dismiss {
+  background: white;
+  color: var(--text-light);
+  border: 1px solid var(--border);
+}
+
+.btn-reminder.dismiss:hover {
+  background: #f7fafc;
+  color: var(--text);
+}
+
 /* ============ Why Section (解释层) ============ */
 .why-section {
   margin-top: 20px;
