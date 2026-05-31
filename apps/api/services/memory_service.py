@@ -38,7 +38,21 @@ class MemoryService:
         sorted_items = sorted(item_counts.items(), key=lambda x: x[1], reverse=True)
         preferred = [name for name, count in sorted_items[:5]]
 
-        return {"preferred_items": preferred, "avoided_items": []}
+        # 从反馈中找出不喜欢的食物
+        avoided = []
+        for feedback in self._feedback:
+            if feedback.get("satisfaction", 3) <= 2:
+                meal_id = feedback.get("meal_id")
+                for meal in self._records:
+                    if meal.id == meal_id:
+                        for item in meal.items:
+                            avoided.append(item.get("name", ""))
+                        break
+
+        return {
+            "preferred_items": preferred,
+            "avoided_items": list(set(avoided))[:5],
+        }
 
     async def get_indulgence_count_this_week(self, user_id: str) -> int:
         """本周放纵次数"""
@@ -59,6 +73,7 @@ class MemoryService:
                 "frequent_items": [],
                 "skipped_meals": [],
                 "avg_daily_spend": 0,
+                "budget_usage": {},
             }
 
         # 分析用餐时间
@@ -101,11 +116,19 @@ class MemoryService:
                 item_counts[item.get("name", "")] += 1
         frequent_items = [name for name, _ in item_counts.most_common(5)]
 
+        # 预算使用习惯
+        budget_usage = {
+            "avg_daily": round(avg_daily_spend, 2),
+            "max_daily": round(max(daily_spend.values()) if daily_spend else 0, 2),
+            "min_daily": round(min(daily_spend.values()) if daily_spend else 0, 2),
+        }
+
         return {
             "usual_times": usual_times,
             "frequent_items": frequent_items,
             "skipped_meals": skipped_meals,
             "avg_daily_spend": round(avg_daily_spend, 2),
+            "budget_usage": budget_usage,
         }
 
     async def save_feedback(self, user_id: str, meal_id: str, satisfaction: int, notes: str) -> None:

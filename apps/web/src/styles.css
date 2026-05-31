@@ -1819,3 +1819,153 @@ body {
   font-size: 0.85rem;
   color: var(--text-light);
 }
+
+/* ============ Auto Draft ============ */
+.auto-draft-card {
+  margin-bottom: 20px;
+}
+
+.draft-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.draft-header h3 {
+  margin: 0;
+}
+
+.draft-meal-type {
+  font-size: 0.8rem;
+  padding: 2px 10px;
+  background: #f7fafc;
+  border-radius: 10px;
+  color: var(--text-light);
+}
+
+.draft-hint {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin-bottom: 12px;
+}
+
+.draft-items {
+  margin-bottom: 12px;
+}
+
+.draft-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.draft-item:last-child {
+  border-bottom: none;
+}
+
+.item-name {
+  flex: 1;
+}
+
+.item-price {
+  margin-left: 12px;
+  color: var(--text-light);
+}
+
+.item-calories {
+  margin-left: 12px;
+  color: var(--text-light);
+  font-size: 0.75rem;
+}
+
+.draft-nutrition {
+  display: flex;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-bottom: 12px;
+  padding: 8px;
+  background: #f7fafc;
+  border-radius: 8px;
+}
+
+.draft-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.reason-tag {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  background: #e8f5e9;
+  border-radius: 10px;
+  color: var(--green);
+}
+
+.draft-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-refresh {
+  flex: 1;
+  padding: 8px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.btn-refresh:hover {
+  background: #f7fafc;
+}
+
+.btn-confirm {
+  flex: 2;
+  padding: 8px;
+  background: var(--green);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.btn-confirm:hover {
+  background: #38a169;
+}
+
+.btn-generate {
+  width: 100%;
+  padding: 10px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.btn-generate:hover {
+  background: var(--primary-hover);
+}
+
+.draft-error {
+  color: var(--red);
+  margin-bottom: 8px;
+}
+
+.btn-retry {
+  padding: 8px 16px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
