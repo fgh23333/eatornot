@@ -3,58 +3,73 @@
 from datetime import datetime
 from fastapi import APIRouter
 from models.meal_record import MealRecord
-from services.memory_service import MemoryService
+from services.db_service import db_service
 
 router = APIRouter()
-
-# In-memory store for Phase 1 (Phase 2: SQLite)
-_meal_records: list[MealRecord] = []
-_feedback_records: list[dict] = []
-
-
-def record_meal_internal(record: MealRecord) -> MealRecord:
-    """Internal function to save meal record (callable from other modules)."""
-    record.id = f"meal-{len(_meal_records) + 1:04d}"
-    if not record.timestamp:
-        record.timestamp = datetime.now()
-    _meal_records.append(record)
-    return record
 
 
 @router.post("/meal/record", response_model=MealRecord)
 async def record_meal(record: MealRecord):
     """Save a meal record."""
-    return record_meal_internal(record)
+    # 生成 ID
+    record.id = f"meal-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    if not record.timestamp:
+        record.timestamp = datetime.now()
+
+    # 保存到数据库
+    await db_service.create_meal(record.model_dump())
+
+    return record
 
 
 @router.get("/today/status")
-async def get_today_status():
+async def get_today_status(user_id: str = "demo-user"):
     """Get today's calorie, budget, and indulgence summary."""
-    today = datetime.now().date()
-    today_meals = [m for m in _meal_records if m.timestamp.date() == today]
+    today_meals = await db_service.get_today_meals(user_id)
 
     total_calories = sum(m.total_calories for m in today_meals)
     total_price = sum(m.total_price for m in today_meals)
 
     return {
-        "date": today.isoformat(),
+        "date": datetime.now().date().isoformat(),
         "meals_count": len(today_meals),
         "total_calories": round(total_calories, 0),
         "total_spent": round(total_price, 2),
-        "meals": [m.model_dump() for m in today_meals],
+        "meals": [
+            {
+                "id": m.id,
+                "user_id": m.user_id,
+                "timestamp": m.timestamp.isoformat(),
+                "meal_type": m.meal_type,
+                "items": m.items,
+                "total_price": m.total_price,
+                "total_calories": m.total_calories,
+            }
+            for m in today_meals
+        ],
     }
 
 
 @router.get("/meal/history")
 async def get_meal_history(user_id: str = "demo-user", days: int = 7):
     """Get meal history for a user."""
-    memory = MemoryService()
-    meals = await memory.get_recent_meals(user_id, days)
+    meals = await db_service.get_meals(user_id, days)
     return {
         "user_id": user_id,
         "days": days,
         "meals_count": len(meals),
-        "meals": [m.model_dump() for m in meals],
+        "meals": [
+            {
+                "id": m.id,
+                "user_id": m.user_id,
+                "timestamp": m.timestamp.isoformat(),
+                "meal_type": m.meal_type,
+                "items": m.items,
+                "total_price": m.total_price,
+                "total_calories": m.total_calories,
+            }
+            for m in meals
+        ],
     }
 
 
@@ -62,10 +77,19 @@ async def get_meal_history(user_id: str = "demo-user", days: int = 7):
 async def submit_feedback(feedback: dict):
     """Submit post-meal satisfaction feedback. Triggers Reflection Agent."""
     from agents.reflection_agent import ReflectionAgent
+    from services.memory_service import MemoryService
 
     meal_id = feedback.get("meal_id", "")
     satisfaction = feedback.get("satisfaction", 3)
     notes = feedback.get("notes", "")
+
+    # 保存到数据库
+    await db_service.create_feedback({
+        "user_id": feedback.get("user_id", "demo-user"),
+        "meal_id": meal_id,
+        "satisfaction": satisfaction,
+        "notes": notes,
+    })
 
     # Run Reflection Agent
     reflection = ReflectionAgent()

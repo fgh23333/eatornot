@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from core.config import get_settings
+from core.database import init_db
 from api.profile_routes import router as profile_router
 from api.recommend_routes import router as recommend_router
 from api.chat_routes import router as chat_router
@@ -25,6 +26,11 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.APP_NAME} API...")
     logger.info(f"Mock MCP: {settings.USE_MOCK_MCP}")
+
+    # 初始化数据库
+    await init_db()
+    logger.info("Database initialized")
+
     yield
     logger.info("Shutting down...")
 

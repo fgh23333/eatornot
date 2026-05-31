@@ -1,35 +1,21 @@
 """Budget Service — tracks daily/weekly spending."""
 
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from models.meal_record import MealRecord
+from services.db_service import db_service
 
 
 class BudgetService:
     """Tracks budget usage from meal records."""
 
-    def __init__(self):
-        # Import here to avoid circular imports
-        from api.meal_routes import _meal_records
-        self._records = _meal_records
-
     async def get_today_spent(self, user_id: str) -> float:
         """Get total spent today."""
-        today = datetime.now().date()
-        return sum(
-            m.total_price for m in self._records
-            if m.user_id == user_id and m.timestamp.date() == today
-        )
+        meals = await db_service.get_today_meals(user_id)
+        return sum(m.total_price for m in meals)
 
     async def get_week_spent(self, user_id: str) -> float:
         """Get total spent this week (last 7 days)."""
-        week_ago = datetime.now() - timedelta(days=7)
-        return sum(
-            m.total_price for m in self._records
-            if m.user_id == user_id and m.timestamp >= week_ago
-        )
+        meals = await db_service.get_meals(user_id, days=7)
+        return sum(m.total_price for m in meals)
 
     async def get_remaining_daily(self, user_id: str, daily_budget: float) -> float:
         """Get remaining daily budget."""
@@ -43,5 +29,4 @@ class BudgetService:
 
     async def get_today_meals(self, user_id: str) -> list:
         """Get today's meal records."""
-        today = datetime.now().date()
-        return [m for m in self._records if m.user_id == user_id and m.timestamp.date() == today]
+        return await db_service.get_today_meals(user_id)
