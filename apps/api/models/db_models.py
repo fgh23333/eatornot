@@ -79,4 +79,4 @@ class ConversationDB(Base):
     role = Column(String, default="user")
     content = Column(String, default="")
     timestamp = Column(DateTime, default=datetime.now)
-    metadata = Column(JSON, default={})
+    extra_data = Column(JSON, default={})  # 使用 extra_data 代替 metadata
