@@ -2,7 +2,15 @@
 
 ## 当前状态
 
-Phase 2 核心交互体验重构已完成：
+### ✅ 已完成
+
+**Phase 1: 基础框架**
+- ✅ FastAPI 后端
+- ✅ React 前端
+- ✅ SQLite 数据库
+- ✅ Mock 麦当劳 MCP
+
+**Phase 2: 核心交互体验重构**
 - ✅ 圆桌辩论 (4阶段)
 - ✅ ActivePlan 多轮对话
 - ✅ Orchestrator 智能调度
@@ -10,31 +18,28 @@ Phase 2 核心交互体验重构已完成：
 - ✅ UI 优化
 - ✅ 中文化
 
+**Phase 3: Dual-Trigger MealDecisionFlow**
+- ✅ 统一决策入口 (`/api/decision`)
+- ✅ 饭点提醒系统 (`/api/reminders`)
+- ✅ 长期记忆强化 (饮食习惯、口味偏好、预算习惯、营养模式)
+- ✅ 自动订单草稿增强 (利用记忆、BalanceMode 联动)
+- ✅ 提醒卡组件 (ReminderCard.tsx)
+
 ## 待完成
 
 ### 高优先级
 
-- [ ] **RAG 向量检索**
-  - 当前知识库使用简单关键词匹配
-  - 需要接入向量数据库 (ChromaDB)
-  - 需要下载 embedding 模型
+- [ ] **前端完整测试**
+  - 测试提醒卡显示
+  - 测试 MealDecisionFlow 完整流程
+  - 测试记忆参考展示
 
-- [ ] **真实 MCP 对接**
-  - 当前使用 Mock 数据
-  - 需要对接真实的麦当劳 MCP
-  - 需要处理认证和错误
-
-- [ ] **前端完善**
-  - 圆桌辩论面板需要更好的交互
-  - 方案精炼需要更直观的 UI
-  - 移动端适配
+- [ ] **拍照分析入口**
+  - 新增图片上传组件
+  - Mock 视觉识别 fallback
+  - 营养范围估算
 
 ### 中优先级
-
-- [ ] **数据库持久化**
-  - 当前使用内存存储
-  - 需要接入 SQLite 或 PostgreSQL
-  - 用户档案、用餐记录需要持久化
 
 - [ ] **用户认证**
   - 当前没有用户系统
@@ -48,15 +53,15 @@ Phase 2 核心交互体验重构已完成：
 
 ### 低优先级
 
+- [ ] **RAG 向量检索**
+  - 当前知识库使用简单关键词匹配
+  - 需要接入向量数据库 (ChromaDB)
+  - 需要下载 embedding 模型
+
 - [ ] **部署**
   - Docker 容器化
   - 云部署 (AWS/阿里云)
   - CI/CD 流水线
-
-- [ ] **监控和日志**
-  - 结构化日志
-  - 性能监控
-  - 错误追踪
 
 - [ ] **测试**
   - 单元测试
@@ -65,10 +70,10 @@ Phase 2 核心交互体验重构已完成：
 
 ## 技术债务
 
-- [ ] 代码注释需要完善
-- [ ] 错误处理需要统一
-- [ ] 类型注解需要补全
-- [ ] API 文档需要生成
+- [ ] ConversationService 从内存存储迁移到数据库
+- [ ] ActivePlanService 从内存存储迁移到数据库
+- [ ] OrchestratorAgent 关键词映射改为 LLM 驱动
+- [ ] 前端 BalanceMode mood 参数接入实际情绪输入
 
 ## 如何贡献
 
@@ -79,5 +84,5 @@ Phase 2 核心交互体验重构已完成：
 
 ## 联系方式
 
-- 项目地址: https://github.com/xxx/eatornot
-- 问题反馈: https://github.com/xxx/eatornot/issues
+- 项目地址: https://github.com/fgh23333/eatornot
+- 问题反馈: https://github.com/fgh23333/eatornot/issues
