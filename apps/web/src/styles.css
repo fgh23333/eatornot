@@ -1969,3 +1969,36 @@ body {
   border-radius: 8px;
   cursor: pointer;
 }
+
+/* ============ Why Section (解释层) ============ */
+.why-section {
+  margin-top: 20px;
+}
+
+.btn-why {
+  width: 100%;
+  padding: 12px;
+  background: #f7fafc;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-light);
+  transition: all 0.2s;
+}
+
+.btn-why:hover {
+  background: #edf2f7;
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.debate-explanation {
+  margin-top: 12px;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

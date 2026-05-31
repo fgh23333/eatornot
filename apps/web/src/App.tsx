@@ -71,6 +71,7 @@ export default function App() {
   const [selectedPlan, setSelectedPlan] = useState<RecommendationPlan | null>(null)
   const [showOrderModal, setShowOrderModal] = useState(false)
   const [orderResult, setOrderResult] = useState<string | null>(null)
+  const [showDebate, setShowDebate] = useState(false)  // 是否显示辩论面板
 
   // 对话数据
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
@@ -349,6 +350,24 @@ export default function App() {
                   />
                 ))}
               </div>
+
+              {/* 为什么推荐 - 解释层 */}
+              {recommendation.debate && (
+                <div className="why-section">
+                  <button
+                    className="btn-why"
+                    onClick={() => setShowDebate(!showDebate)}
+                  >
+                    {showDebate ? '收起解释' : '💡 为什么推荐这些？'}
+                  </button>
+
+                  {showDebate && (
+                    <div className="debate-explanation">
+                      <RoundTableDebate debate={recommendation.debate} />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -373,13 +392,6 @@ export default function App() {
           {showFeedback && <FeedbackForm onSubmit={handleSubmitFeedback} />}
           {feedbackResult && <div className="feedback-result">{feedbackResult}</div>}
         </main>
-
-        {/* 右侧：Agent 辩论 */}
-        {recommendation && (
-          <aside className="sidebar-right">
-            <RoundTableDebate debate={recommendation.debate} />
-          </aside>
-        )}
       </div>
 
       {/* 订单确认弹窗 */}
