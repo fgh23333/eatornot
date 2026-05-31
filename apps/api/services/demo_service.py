@@ -1,5 +1,6 @@
 """Demo 服务 — 7 天长期伴随模拟"""
 
+import uuid
 from datetime import datetime, timedelta
 from models.user_profile import UserProfile, Goal
 from services.db_service import db_service
@@ -11,18 +12,20 @@ class DemoService:
 
     async def simulate_week(self, user_id: str = "demo-user") -> dict:
         """模拟 7 天行为"""
-        # 创建用户档案
-        user = UserProfile(
-            user_id=user_id,
-            name="高压学生",
-            goal=Goal.LOSE_WEIGHT,
-            daily_budget=35.0,
-            weekly_budget=220.0,
-            meal_schedule={"breakfast": "08:30", "lunch": "12:30", "dinner": "18:30"},
-        )
-
-        # 保存用户
-        await db_service.create_user(user.model_dump())
+        # 检查用户是否已存在
+        existing_user = await db_service.get_user(user_id)
+        if not existing_user:
+            # 创建用户档案
+            user = UserProfile(
+                user_id=user_id,
+                name="高压学生",
+                goal=Goal.LOSE_WEIGHT,
+                daily_budget=35.0,
+                weekly_budget=220.0,
+                meal_schedule={"breakfast": "08:30", "lunch": "12:30", "dinner": "18:30"},
+            )
+            # 保存用户
+            await db_service.create_user(user.model_dump())
 
         # 模拟 7 天用餐记录
         timeline = self._generate_timeline()
@@ -142,8 +145,9 @@ class DemoService:
     def _create_meal(self, timestamp: datetime, meal_type: str, price: float, calories: float) -> dict:
         """创建用餐记录"""
         return {
+            "id": str(uuid.uuid4())[:8],
             "user_id": "demo-user",
-            "timestamp": timestamp.isoformat(),
+            "timestamp": timestamp,
             "meal_type": meal_type,
             "items": [{"name": f"模拟菜品-{meal_type}", "price": price, "calories": calories}],
             "total_price": price,
