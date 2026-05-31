@@ -11,6 +11,7 @@ from api.recommend_routes import router as recommend_router
 from api.chat_routes import router as chat_router
 from api.meal_routes import router as meal_router
 from api.plan_routes import router as plan_router
+from api.dashboard_routes import router as dashboard_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -48,6 +49,7 @@ app.include_router(recommend_router, prefix="/api", tags=["recommend"])
 app.include_router(chat_router, prefix="/api", tags=["chat"])
 app.include_router(meal_router, prefix="/api", tags=["meal"])
 app.include_router(plan_router, prefix="/api", tags=["plan"])
+app.include_router(dashboard_router, prefix="/api", tags=["dashboard"])
 
 
 @app.get("/health")

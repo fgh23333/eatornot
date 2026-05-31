@@ -1538,3 +1538,214 @@ body {
     flex-wrap: wrap;
   }
 }
+
+/* ============ Today Dashboard ============ */
+.dashboard-card {
+  margin-bottom: 20px;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.dashboard-header h3 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.dashboard-time {
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+/* 三餐状态 */
+.meals-status {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.meal-status {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: #f7fafc;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.meal-status.recorded {
+  background: #f0fff4;
+  border-color: var(--green);
+}
+
+.meal-icon {
+  font-size: 1.2rem;
+}
+
+.meal-info {
+  flex: 1;
+}
+
+.meal-name {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin-bottom: 2px;
+}
+
+.meal-recorded {
+  display: flex;
+  gap: 6px;
+  font-size: 0.7rem;
+}
+
+.meal-time {
+  color: var(--text-light);
+}
+
+.meal-cal {
+  color: var(--green);
+  font-weight: 500;
+}
+
+.meal-pending {
+  font-size: 0.7rem;
+  color: var(--yellow);
+}
+
+/* 距离上次进食 */
+.last-meal-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f7fafc;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 0.85rem;
+}
+
+.last-meal-label {
+  color: var(--text-light);
+}
+
+.last-meal-time {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+/* 营养进度 */
+.nutrition-progress {
+  margin-bottom: 16px;
+}
+
+.progress-item {
+  margin-bottom: 12px;
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+.progress-label span:last-child {
+  color: var(--text-light);
+}
+
+.progress-bar {
+  height: 8px;
+  background: #edf2f7;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+.progress-fill.calorie {
+  background: linear-gradient(90deg, var(--green), var(--yellow));
+}
+
+.progress-fill.budget {
+  background: linear-gradient(90deg, var(--primary), var(--green));
+}
+
+.progress-gap,
+.progress-remaining {
+  font-size: 0.7rem;
+  color: var(--text-light);
+  margin-top: 2px;
+}
+
+/* 下一餐建议 */
+.next-meal-suggestion {
+  padding: 14px;
+  background: #f7fafc;
+  border-radius: 10px;
+  border-left: 3px solid var(--primary);
+}
+
+.suggestion-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.suggestion-icon {
+  font-size: 1rem;
+}
+
+.suggestion-message {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.suggestion-details {
+  display: flex;
+  gap: 16px;
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-bottom: 8px;
+}
+
+.suggestion-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.reason-tag {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  background: #fff3e0;
+  border-radius: 10px;
+  color: var(--yellow);
+}
+
+.btn-suggestion {
+  width: 100%;
+  padding: 8px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-suggestion:hover {
+  background: var(--primary-hover);
+}

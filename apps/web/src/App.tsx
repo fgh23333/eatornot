@@ -25,6 +25,7 @@ import { NutritionBalancePanel } from './components/NutritionBalancePanel'
 import { ActivePlanPanel } from './components/ActivePlanPanel'
 import { ChatMessageList, type ChatMessage } from './components/ChatMessageList'
 import { ResetButtons } from './components/ResetButtons'
+import { TodayDashboard } from './components/TodayDashboard'
 
 // 应用阶段
 type AppPhase = 'mode_selection' | 'onboarding' | 'quick_form' | 'main_app'
@@ -258,12 +259,17 @@ export default function App() {
       </header>
 
       <div className="app-layout">
-        {/* 左侧：档案和状态 */}
+        {/* 左侧：仪表盘和档案 */}
         {mode === 'long_term' && profile && (
           <aside className="sidebar-left">
+            <TodayDashboard
+              userId={profile.user_id}
+              onRequestRecommend={(mealType) => {
+                setInputValue(`帮我选${mealType === 'breakfast' ? '早餐' : mealType === 'lunch' ? '午餐' : '晚餐'}`)
+                handleRecommend(`帮我选${mealType === 'breakfast' ? '早餐' : mealType === 'lunch' ? '午餐' : '晚餐'}`)
+              }}
+            />
             <ProfileCard profile={profile} />
-            <BudgetBar dailyBudget={profile.daily_budget} />
-            <NutritionBalancePanel profile={profile} />
           </aside>
         )}
 

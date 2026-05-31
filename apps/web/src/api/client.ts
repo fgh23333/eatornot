@@ -230,3 +230,13 @@ export async function submitFeedback(feedback: { meal_id: string; satisfaction: 
   })
   return res.json()
 }
+
+export async function fetchDashboard(userId: string = 'demo-user'): Promise<any> {
+  const res = await fetch(`${BASE}/api/dashboard?user_id=${userId}`)
+  return res.json()
+}
+
+export async function fetchReminders(userId: string = 'demo-user'): Promise<any> {
+  const res = await fetch(`${BASE}/api/dashboard/reminders?user_id=${userId}`)
+  return res.json()
+}

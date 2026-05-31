@@ -1,14 +1,15 @@
-"""Memory Service — stores and retrieves user history and preferences."""
+"""长期记忆服务 — 记录用户饮食习惯"""
 
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
+from collections import Counter
 
 if TYPE_CHECKING:
     from models.meal_record import MealRecord
 
 
 class MemoryService:
-    """Manages user meal history and preferences."""
+    """管理用户用餐历史和偏好"""
 
     def __init__(self):
         from api.meal_routes import _meal_records, _feedback_records
@@ -16,31 +17,99 @@ class MemoryService:
         self._feedback = _feedback_records
 
     async def get_recent_meals(self, user_id: str, days: int = 7) -> list:
-        """Get recent meal records."""
+        """获取最近的用餐记录"""
         cutoff = datetime.now() - timedelta(days=days)
         return [m for m in self._records if m.user_id == user_id and m.timestamp >= cutoff]
 
     async def get_preferences(self, user_id: str) -> dict:
-        """Infer preferences from meal history."""
+        """从历史记录推断偏好"""
         recent = await self.get_recent_meals(user_id, days=30)
         if not recent:
             return {"preferred_items": [], "avoided_items": []}
 
-        # Count item frequency
+        # 统计菜品频率
         item_counts: dict[str, int] = {}
         for meal in recent:
             for item in meal.items:
                 name = item.get("name", "unknown")
                 item_counts[name] = item_counts.get(name, 0) + 1
 
-        # Sort by frequency
+        # 按频率排序
         sorted_items = sorted(item_counts.items(), key=lambda x: x[1], reverse=True)
         preferred = [name for name, count in sorted_items[:5]]
 
         return {"preferred_items": preferred, "avoided_items": []}
 
+    async def get_indulgence_count_this_week(self, user_id: str) -> int:
+        """本周放纵次数"""
+        week_ago = datetime.now() - timedelta(days=7)
+        count = 0
+        for meal in self._records:
+            if meal.user_id == user_id and meal.timestamp >= week_ago:
+                if meal.plan_mode == "controlled_indulgence":
+                    count += 1
+        return count
+
+    async def get_meal_patterns(self, user_id: str) -> dict:
+        """分析用餐模式"""
+        recent = await self.get_recent_meals(user_id, days=30)
+        if not recent:
+            return {
+                "usual_times": {},
+                "frequent_items": [],
+                "skipped_meals": [],
+                "avg_daily_spend": 0,
+            }
+
+        # 分析用餐时间
+        meal_times = {"breakfast": [], "lunch": [], "dinner": [], "snack": []}
+        daily_spend = {}
+
+        for meal in recent:
+            hour = meal.timestamp.hour
+            meal_type = meal.meal_type
+
+            if meal_type in meal_times:
+                meal_times[meal_type].append(hour)
+
+            date = meal.timestamp.date()
+            if date not in daily_spend:
+                daily_spend[date] = 0
+            daily_spend[date] += meal.total_price
+
+        # 计算常见用餐时间
+        usual_times = {}
+        for meal_type, times in meal_times.items():
+            if times:
+                avg_hour = sum(times) / len(times)
+                usual_times[meal_type] = f"{int(avg_hour):02d}:00"
+
+        # 计算平均每日花费
+        avg_daily_spend = sum(daily_spend.values()) / len(daily_spend) if daily_spend else 0
+
+        # 识别跳过的餐次
+        skipped_meals = []
+        for meal_type in ["breakfast", "lunch", "dinner"]:
+            if not meal_times[meal_type]:
+                skipped_meals.append(meal_type)
+
+        # 频繁点的菜品
+        frequent_items = []
+        item_counts = Counter()
+        for meal in recent:
+            for item in meal.items:
+                item_counts[item.get("name", "")] += 1
+        frequent_items = [name for name, _ in item_counts.most_common(5)]
+
+        return {
+            "usual_times": usual_times,
+            "frequent_items": frequent_items,
+            "skipped_meals": skipped_meals,
+            "avg_daily_spend": round(avg_daily_spend, 2),
+        }
+
     async def save_feedback(self, user_id: str, meal_id: str, satisfaction: int, notes: str) -> None:
-        """Save feedback for a meal."""
+        """保存反馈"""
         from models.meal_record import MealRecord
         feedback = {
             "user_id": user_id,
@@ -51,19 +120,13 @@ class MemoryService:
         }
         self._feedback.append(feedback)
 
-        # Update meal record satisfaction
+        # 更新用餐记录的满意度
         for meal in self._records:
             if meal.id == meal_id:
                 meal.satisfaction = satisfaction
                 meal.notes = notes
                 break
 
-    async def get_indulgence_count_this_week(self, user_id: str) -> int:
-        """Count indulgence meals this week."""
-        week_ago = datetime.now() - timedelta(days=7)
-        count = 0
-        for meal in self._records:
-            if meal.user_id == user_id and meal.timestamp >= week_ago:
-                if meal.plan_mode == "controlled_indulgence":
-                    count += 1
-        return count
+
+# 全局实例
+memory_service = MemoryService()
