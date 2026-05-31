@@ -278,3 +278,30 @@ export async function mealDecision(request: {
   })
   return res.json()
 }
+
+export async function getProviderStatus(): Promise<any> {
+  const res = await fetch(`${BASE}/api/provider/status`)
+  return res.json()
+}
+
+export async function getDemoTimeline(userId: string = 'demo-user'): Promise<any> {
+  const res = await fetch(`${BASE}/api/demo/timeline?user_id=${userId}`)
+  return res.json()
+}
+
+export async function simulateWeek(userId: string = 'demo-user'): Promise<any> {
+  const res = await fetch(`${BASE}/api/demo/simulate-week?user_id=${userId}`, {
+    method: 'POST',
+  })
+  return res.json()
+}
+
+export async function getLearningPoints(userId: string = 'demo-user'): Promise<any> {
+  const res = await fetch(`${BASE}/api/demo/learning?user_id=${userId}`)
+  return res.json()
+}
+
+export async function getDemoMetrics(userId: string = 'demo-user'): Promise<any> {
+  const res = await fetch(`${BASE}/api/demo/metrics?user_id=${userId}`)
+  return res.json()
+}

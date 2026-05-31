@@ -5,7 +5,7 @@ from fastapi import APIRouter
 from models.recommendation import RecommendationResponse, RecommendationPlan, MenuItem, OrderDraft, OrderConfirmation
 from models.quick_profile import QuickProfile
 from models.user_profile import UserProfile, Goal
-from services import mock_mcdonalds_mcp as menu_service
+from providers.factory import get_provider
 from agents.supervisor_agent import SupervisorAgent
 from services.budget_service import BudgetService
 from services.memory_service import MemoryService
@@ -62,10 +62,29 @@ async def get_recommendation(body: dict):
         user_id = body.get("user_id", "demo-user")
         user = await get_profile(user_id)
 
+    # 通过 Provider 获取菜单
+    provider = await get_provider()
+    items = await provider.list_items()
+    candidates = [
+        {
+            "name": i.name,
+            "item_code": i.item_code,
+            "category": i.category,
+            "price": i.price,
+            "calories": i.calories,
+            "protein": i.protein,
+            "fat": i.fat,
+            "carbohydrate": i.carbohydrate,
+            "sodium": i.sodium,
+            "tags": i.tags,
+        }
+        for i in items
+    ]
+
     # Build context for SupervisorAgent
     context = {
         "user": user,
-        "candidates": menu_service.list_nutrition_foods(),
+        "candidates": candidates,
         "meal_type": ctx.get("meal_type", "dinner"),
         "mood": ctx.get("mood", "normal"),
         "time_pressure": ctx.get("time_pressure", "normal"),
@@ -102,20 +121,23 @@ async def get_recommendation(body: dict):
 @router.post("/order/draft", response_model=dict)
 async def create_order_draft(draft: OrderDraft):
     """Create an order draft (no real MCP call)."""
-    items = menu_service.calculate_price([i.item_code for i in draft.items])
+    provider = await get_provider()
+    price_info = await provider.calculate_price([i.item_code for i in draft.items])
     return {
         "draft_id": str(uuid.uuid4())[:8],
-        "items": items["items"],
-        "total_price": items["total_price"],
+        "items": price_info.get("items", []),
+        "total_price": price_info.get("total_price", 0),
         "status": "draft",
     }
 
 
 @router.post("/order/confirm", response_model=OrderConfirmation)
 async def confirm_order(draft: OrderDraft):
-    """Confirm order — uses mock MCP."""
+    """Confirm order — uses Provider."""
+    provider = await get_provider()
     item_codes = [i.item_code for i in draft.items]
-    result = menu_service.create_order(item_codes)
+    draft_result = await provider.create_order_draft(item_codes)
+    result = await provider.confirm_order(draft_result.get("draft_id", ""), True)
 
     # Auto-record meal after order confirmation
     try:

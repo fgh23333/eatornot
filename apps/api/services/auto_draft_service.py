@@ -6,7 +6,7 @@ from models.recommendation import MenuItem
 from services.nutrition_calculator import calculate_bmr, calculate_tdee, get_daily_calorie_target, get_meal_calorie_budget
 from services.budget_service import BudgetService
 from services.memory_service import MemoryService
-from services import mock_mcdonalds_mcp as menu_service
+from providers.factory import get_provider
 
 
 class AutoDraftService:
@@ -54,8 +54,24 @@ class AutoDraftService:
         taste_prefs = await self.memory_service.get_taste_preferences(user.user_id)
         dietary_notes = []
 
-        # 获取菜单
-        menu_items = menu_service.list_nutrition_foods()
+        # 通过 Provider 获取菜单
+        provider = await get_provider()
+        items = await provider.list_items()
+        menu_items = [
+            {
+                "name": i.name,
+                "item_code": i.item_code,
+                "category": i.category,
+                "price": i.price,
+                "calories": i.calories,
+                "protein": i.protein,
+                "fat": i.fat,
+                "carbohydrate": i.carbohydrate,
+                "sodium": i.sodium,
+                "tags": i.tags,
+            }
+            for i in items
+        ]
 
         # 根据目标筛选和搭配
         selected_items = self._select_items(

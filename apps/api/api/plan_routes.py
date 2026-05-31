@@ -112,9 +112,9 @@ def _fallback_parse(message: str) -> dict:
     }
 
 
-def _apply_refinement(plan: ActivePlan, parsed: dict) -> list[MenuItem]:
+async def _apply_refinement(plan: ActivePlan, parsed: dict) -> list[MenuItem]:
     """根据解析结果应用修改"""
-    from services.mock_mcdonalds_mcp import list_nutrition_foods
+    from providers.factory import get_provider
 
     new_items = list(plan.items)
     action = parsed.get("action", "constraint")
@@ -151,10 +151,22 @@ def _apply_refinement(plan: ActivePlan, parsed: dict) -> list[MenuItem]:
 
         # 查找替代品
         if replacement:
-            all_items = list_nutrition_foods()
-            for item_data in all_items:
-                if replacement in item_data.get("name", ""):
-                    new_items.append(MenuItem(**item_data))
+            provider = await get_provider()
+            all_items = await provider.list_items()
+            for item in all_items:
+                if replacement in item.name:
+                    new_items.append(MenuItem(
+                        name=item.name,
+                        item_code=item.item_code,
+                        category=item.category,
+                        price=item.price,
+                        calories=item.calories,
+                        protein=item.protein,
+                        fat=item.fat,
+                        carbohydrate=item.carbohydrate,
+                        sodium=item.sodium,
+                        tags=item.tags,
+                    ))
                     break
 
     elif action == "sort":
@@ -205,7 +217,7 @@ async def refine_plan(body: dict):
     logger.info(f"Parsed refinement: {parsed}")
 
     # 应用修改
-    new_items = _apply_refinement(plan, parsed)
+    new_items = await _apply_refinement(plan, parsed)
 
     # 构建变更描述
     what_changed = parsed.get("reason", message)

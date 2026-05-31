@@ -52,6 +52,12 @@ body {
   font-size: 0.9rem;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .app-layout {
   display: grid;
   grid-template-columns: 280px 1fr 320px;
@@ -2058,6 +2064,185 @@ body {
 .btn-reminder.dismiss:hover {
   background: #f7fafc;
   color: var(--text);
+}
+
+/* ============ Provider Badge ============ */
+.provider-badge-container {
+  position: relative;
+}
+
+.provider-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid;
+  border-radius: 12px;
+  background: transparent;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.provider-badge:hover {
+  opacity: 0.8;
+}
+
+.provider-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.provider-tooltip {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  padding: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  min-width: 220px;
+  z-index: 100;
+}
+
+.tooltip-header {
+  font-weight: 600;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+.tooltip-message {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 0.75rem;
+  color: var(--text-light);
+  line-height: 1.4;
+}
+
+/* ============ Learning Panel ============ */
+.learning-panel {
+  margin-bottom: 20px;
+}
+
+.learning-panel h3 {
+  margin-bottom: 12px;
+}
+
+.learning-list {
+  list-style: none;
+  padding: 0;
+}
+
+.learning-item {
+  display: flex;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.learning-item:last-child {
+  border-bottom: none;
+}
+
+.learning-bullet {
+  color: var(--primary);
+  font-weight: bold;
+}
+
+.learning-text {
+  flex: 1;
+  line-height: 1.4;
+}
+
+/* ============ Metrics Panel ============ */
+.metrics-panel {
+  margin-bottom: 20px;
+}
+
+.metrics-panel h3 {
+  margin-bottom: 4px;
+}
+
+.metrics-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-bottom: 16px;
+}
+
+.metrics-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.metric-item {
+  padding: 12px;
+  background: #f7fafc;
+  border-radius: 8px;
+}
+
+.metric-label {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-bottom: 6px;
+}
+
+.metric-values {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.metric-before {
+  color: var(--text-light);
+  text-decoration: line-through;
+}
+
+.metric-arrow {
+  color: var(--text-light);
+}
+
+.metric-after {
+  font-weight: 600;
+}
+
+.metric-delta {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.metric-delta.improved {
+  background: #e8f5e9;
+  color: var(--green);
+}
+
+.metric-delta.worsened {
+  background: #ffebee;
+  color: var(--red);
+}
+
+.metrics-note {
+  margin-top: 12px;
+  font-size: 0.7rem;
+  color: var(--text-light);
+  font-style: italic;
 }
 
 /* ============ Why Section (解释层) ============ */

@@ -29,6 +29,9 @@ import { TodayDashboard } from './components/TodayDashboard'
 import { BalanceMode } from './components/BalanceMode'
 import { AutoDraft } from './components/AutoDraft'
 import { ReminderCard } from './components/ReminderCard'
+import { ProviderBadge } from './components/ProviderBadge'
+import { LearningPanel } from './components/LearningPanel'
+import { MetricsPanel } from './components/MetricsPanel'
 
 // 应用阶段
 type AppPhase = 'mode_selection' | 'onboarding' | 'quick_form' | 'main_app'
@@ -256,10 +259,13 @@ export default function App() {
           <h1>🍔 EatOrNot</h1>
           <span className="mode-badge">{mode === 'long_term' ? '长期管理' : '快速选择'}</span>
         </div>
-        <ResetButtons
-          onResetConversation={handleResetConversation}
-          onResetProfile={handleResetProfile}
-        />
+        <div className="header-right">
+          <ProviderBadge />
+          <ResetButtons
+            onResetConversation={handleResetConversation}
+            onResetProfile={handleResetProfile}
+          />
+        </div>
       </header>
 
       <div className="app-layout">
@@ -283,6 +289,8 @@ export default function App() {
               userId={profile.user_id}
               mood="normal"
             />
+            <LearningPanel userId={profile.user_id} />
+            <MetricsPanel userId={profile.user_id} />
             <ProfileCard profile={profile} />
           </aside>
         )}
