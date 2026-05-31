@@ -26,6 +26,7 @@ import { ActivePlanPanel } from './components/ActivePlanPanel'
 import { ChatMessageList, type ChatMessage } from './components/ChatMessageList'
 import { ResetButtons } from './components/ResetButtons'
 import { TodayDashboard } from './components/TodayDashboard'
+import { BalanceMode } from './components/BalanceMode'
 
 // 应用阶段
 type AppPhase = 'mode_selection' | 'onboarding' | 'quick_form' | 'main_app'
@@ -268,6 +269,10 @@ export default function App() {
                 setInputValue(`帮我选${mealType === 'breakfast' ? '早餐' : mealType === 'lunch' ? '午餐' : '晚餐'}`)
                 handleRecommend(`帮我选${mealType === 'breakfast' ? '早餐' : mealType === 'lunch' ? '午餐' : '晚餐'}`)
               }}
+            />
+            <BalanceMode
+              userId={profile.user_id}
+              mood="normal"
             />
             <ProfileCard profile={profile} />
           </aside>

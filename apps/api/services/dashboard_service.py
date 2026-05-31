@@ -114,18 +114,58 @@ class DashboardService:
         hour = now.hour
         minute = now.minute
 
+        # 解析用户的用餐时间表
+        meal_schedule = user.meal_schedule or {}
+        schedule_times = {}
+        for meal_type, time_str in meal_schedule.items():
+            try:
+                parts = time_str.split(":")
+                schedule_times[meal_type] = int(parts[0]) * 60 + int(parts[1])
+            except:
+                pass
+
+        # 默认时间表
+        if not schedule_times:
+            schedule_times = {
+                "breakfast": 8 * 60,   # 08:00
+                "lunch": 12 * 60,      # 12:00
+                "dinner": 18 * 60,     # 18:30
+            }
+
+        current_minutes = hour * 60 + minute
+
         # 判断当前应该吃哪一餐
-        if hour < 10 and not meal_status["breakfast"]["recorded"]:
-            meal_type = "breakfast"
-            urgency = "high" if hour >= 8 else "normal"
-        elif 10 <= hour < 14 and not meal_status["lunch"]["recorded"]:
-            meal_type = "lunch"
-            urgency = "high" if hour >= 12 else "normal"
-        elif 14 <= hour < 21 and not meal_status["dinner"]["recorded"]:
-            meal_type = "dinner"
-            urgency = "high" if hour >= 18 else "normal"
-        else:
-            # 已经过了饭点或者都吃过了
+        meal_type = None
+        urgency = "none"
+
+        # 检查每餐的状态和时间
+        for mt in ["breakfast", "lunch", "dinner"]:
+            if meal_status[mt]["recorded"]:
+                continue
+
+            scheduled = schedule_times.get(mt, 0)
+            time_diff = current_minutes - scheduled
+
+            # 如果还没到这餐时间，且是下一餐
+            if time_diff < -30:
+                # 还没到饭点，但可以提前建议
+                if meal_type is None:
+                    meal_type = mt
+                    urgency = "low"
+                break
+            elif -30 <= time_diff <= 30:
+                # 接近饭点（前后30分钟）
+                meal_type = mt
+                urgency = "normal"
+                break
+            elif time_diff > 30 and time_diff < 180:
+                # 已过饭点但不超过3小时
+                meal_type = mt
+                urgency = "high"
+                break
+
+        # 如果所有餐次都已记录或已过
+        if meal_type is None:
             if calorie_gap > 200:
                 meal_type = "snack"
                 urgency = "low"
@@ -141,16 +181,29 @@ class DashboardService:
             calorie_gap + 500,  # 加上一些缓冲
             meal_type
         )
-        meal_price_budget = budget_remaining / (3 - sum(1 for s in meal_status.values() if s["recorded"]))
+        remaining_meals = 3 - sum(1 for s in meal_status.values() if s["recorded"])
+        meal_price_budget = budget_remaining / max(1, remaining_meals)
 
         # 生成建议理由
         reasons = []
+        meal_cn = {"breakfast": "早", "lunch": "午", "dinner": "晚"}.get(meal_type, "")
+
         if urgency == "high":
-            reasons.append(f"已过{'早' if meal_type == 'breakfast' else '午' if meal_type == 'lunch' else '晚'}餐时间")
+            scheduled_time = meal_schedule.get(meal_type, "")
+            reasons.append(f"已过{meal_cn}餐时间（{scheduled_time}）")
+        elif urgency == "normal":
+            reasons.append(f"接近{meal_cn}餐时间")
+
         if calorie_gap > 300:
             reasons.append(f"今日热量缺口 {round(calorie_gap)} 千卡")
         if budget_remaining < 20:
             reasons.append("预算紧张，建议选择性价比高的选项")
+
+        # 根据用户习惯提供建议
+        if meal_type == "breakfast" and hour >= 9:
+            reasons.append("早餐不宜太晚，影响新陈代谢")
+        elif meal_type == "dinner" and hour >= 20:
+            reasons.append("晚餐太晚影响睡眠，建议选择清淡食物")
 
         return {
             "meal_type": meal_type,
@@ -158,7 +211,7 @@ class DashboardService:
             "calorie_budget": round(meal_calorie_budget),
             "price_budget": round(meal_price_budget, 2),
             "reasons": reasons,
-            "message": f"建议{'尽快' if urgency == 'high' else ''}吃{meal_type}",
+            "message": f"建议{'尽快' if urgency == 'high' else ''}吃{meal_cn}餐",
         }
 
 
