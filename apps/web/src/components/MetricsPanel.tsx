@@ -24,7 +24,7 @@ interface MetricsPanelProps {
 export function MetricsPanel({ userId = 'demo-user' }: MetricsPanelProps) {
   const [metrics, setMetrics] = useState<MetricsData | null>(null)
   const [loading, setLoading] = useState(true)
-  [showDetails, setShowDetails] = useState(false)
+  const [showDetails, setShowDetails] = useState(false)
 
   useEffect(() => {
     fetchMetrics()
