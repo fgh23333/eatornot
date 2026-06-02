@@ -82,8 +82,23 @@ class McDonaldsMcpProvider(FoodProvider):
         """查询菜单"""
         try:
             result = await self._call_mcp_tool("list-nutrition-foods")
-            if result and isinstance(result, list) and len(result) > 0:
-                items = [self._to_food_item(i) for i in result]
+
+            # 解析结果
+            items_data = []
+            if result and isinstance(result, list):
+                items_data = result
+            elif result and isinstance(result, dict) and "data" in result:
+                data = result["data"]
+                if isinstance(data, list):
+                    items_data = data
+                elif isinstance(data, str):
+                    # 尝试解析 CSV 格式
+                    parsed = self._parse_csv_items(data)
+                    if parsed:
+                        items_data = parsed
+
+            if items_data and len(items_data) > 0:
+                items = [self._to_food_item(i) for i in items_data]
                 if category:
                     items = [i for i in items if i.category == category]
                 return items
@@ -96,6 +111,7 @@ class McDonaldsMcpProvider(FoodProvider):
 
     async def _fallback_to_mock(self, category: str = None) -> list[FoodItem]:
         """降级到 Mock 数据"""
+        logger.warning("Falling back to Mock data because MCP returned empty or failed")
         from .mock_mcdonalds_provider import MockMcDonaldsProvider
         mock = MockMcDonaldsProvider()
         return await mock.list_items(category)
@@ -166,6 +182,8 @@ class McDonaldsMcpProvider(FoodProvider):
 
     async def _call_mcp_tool(self, tool_name: str, args: dict = None) -> any:
         """调用 MCP 工具"""
+        import json
+        import re
         from mcp import ClientSession
         from mcp.client.streamable_http import streamablehttp_client
 
@@ -180,13 +198,83 @@ class McDonaldsMcpProvider(FoodProvider):
                 if hasattr(result, "content") and result.content:
                     first = result.content[0]
                     if hasattr(first, "text"):
-                        import json
+                        text = first.text
+
+                        # 尝试直接解析 JSON
                         try:
-                            return json.loads(first.text)
+                            return json.loads(text)
                         except json.JSONDecodeError:
-                            return first.text
+                            pass
+
+                        # 尝试从文本中提取 JSON
+                        json_match = re.search(r'\{.*\}', text, re.DOTALL)
+                        if json_match:
+                            try:
+                                return json.loads(json_match.group())
+                            except json.JSONDecodeError:
+                                pass
+
+                        # 如果是 CSV 格式的数据
+                        if text.startswith('[') and '{' in text:
+                            return self._parse_csv_items(text)
+
+                        return text
 
                 return None
+
+    def _parse_csv_items(self, csv_text: str) -> list[dict]:
+        """解析 CSV 格式的菜品数据"""
+        items = []
+        lines = csv_text.strip().split('\n')
+
+        # 跳过第一行（数量信息 [160]）
+        # 第二行是表头
+        if len(lines) < 3:
+            return items
+
+        header_line = lines[1]
+        headers = [h.strip() for h in header_line.replace('{', '').replace('}:', '').split(',')]
+
+        # 解析数据行
+        for line in lines[2:]:
+            line = line.strip()
+            if not line:
+                continue
+
+            values = [v.strip() for v in line.split(',')]
+            if len(values) >= len(headers):
+                item = {}
+                for i, header in enumerate(headers):
+                    value = values[i] if i < len(values) else ''
+                    # 转换数值类型
+                    if value == 'null':
+                        item[header] = None
+                    else:
+                        try:
+                            if '.' in value:
+                                item[header] = float(value)
+                            else:
+                                item[header] = int(value)
+                        except ValueError:
+                            item[header] = value
+
+                # 转换为标准格式
+                product_name = item.get('productName', '')
+                if product_name:
+                    items.append({
+                        'name': product_name,
+                        'item_code': f'MCD_{len(items)+1:03d}',
+                        'category': 'main',
+                        'price': 0,  # MCP 不返回价格
+                        'calories': item.get('energyKcal', 0),
+                        'protein': item.get('protein', 0),
+                        'fat': item.get('fat', 0),
+                        'carbohydrate': item.get('carbohydrate', 0),
+                        'sodium': item.get('sodium', 0),
+                        'tags': [],
+                    })
+
+        return items
 
     def _to_food_item(self, data: dict) -> FoodItem:
         """将 dict 转换为 FoodItem"""
