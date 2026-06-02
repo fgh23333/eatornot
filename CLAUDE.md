@@ -96,6 +96,52 @@ npm run dev
 | `apps/web/src/App.tsx` | 前端主应用 |
 | `knowledge/nutrition.json` | 营养学知识库 |
 
+## 协作规范
+
+### Git Flow: GitHub Flow (精简版)
+
+```
+main ────────────────────────────────────────────●
+       \              \              \
+  feat/xxx       feat/yyy       feat/zzz
+        │              │              │
+        └──── PR ──────┘──────────────┘
+              合并回 main
+```
+
+- `main` 永远可运行，禁止直接 push
+- 所有开发走 `feat/*` 分支
+- 合并走 PR，hackathon 期间可自 merge（建议交叉 review）
+
+### Commit 规范
+
+```
+<type>: <描述>
+```
+
+| type | 用途 |
+|------|------|
+| `feat` | 新功能 |
+| `fix` | 修复 bug |
+| `refactor` | 重构（不改功能） |
+| `chore` | 构建/依赖/配置/杂务 |
+
+示例：
+```
+feat: 添加饭点主动提醒功能
+fix: 修复营养计算单位错误
+refactor: 拆分 dashboard 服务为独立模块
+chore: 升级 vite 到最新版本
+```
+
+### 分支命名
+
+```
+feat/<简短描述>
+```
+
+示例：`feat/ui-redesign`、`feat/proactive-reminder`、`feat/learning-engine`
+
 ## 下一步工作
 
 见 `TODO.md`
