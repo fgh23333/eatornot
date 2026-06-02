@@ -2273,6 +2273,121 @@ body {
   color: var(--text-light);
 }
 
+/* ============ Safety Banner ============ */
+.safety-banner {
+  margin-bottom: 20px;
+}
+
+.safety-banner h3 {
+  margin-bottom: 16px;
+}
+
+.safety-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.safety-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: #f7fafc;
+  border-radius: 8px;
+}
+
+.safety-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.safety-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.safety-content {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  line-height: 1.5;
+}
+
+/* Compact Safety Banner */
+.safety-banner-compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f7fafc;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  margin-bottom: 16px;
+}
+
+.safety-banner-compact .safety-icon {
+  font-size: 1rem;
+}
+
+.safety-banner-compact .safety-text {
+  flex: 1;
+  color: var(--text-light);
+}
+
+.btn-safety-details {
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.btn-safety-details:hover {
+  background: #f7fafc;
+}
+
+.safety-details-popup {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 8px;
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+}
+
+.safety-detail-item {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.safety-detail-item:last-child {
+  margin-bottom: 0;
+}
+
+.detail-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.detail-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+.detail-content {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  line-height: 1.4;
+}
+
 /* ============ Why Section (解释层) ============ */
 .why-section {
   margin-top: 20px;

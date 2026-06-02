@@ -32,6 +32,7 @@ import { ReminderCard } from './components/ReminderCard'
 import { ProviderBadge } from './components/ProviderBadge'
 import { LearningPanel } from './components/LearningPanel'
 import { MetricsPanel } from './components/MetricsPanel'
+import { SafetyBanner } from './components/SafetyBanner'
 
 // 应用阶段
 type AppPhase = 'mode_selection' | 'onboarding' | 'quick_form' | 'main_app'
@@ -297,6 +298,9 @@ export default function App() {
 
         {/* 中间：对话和推荐 */}
         <main className={`main-content ${mode === 'quick' ? 'full-width' : ''}`}>
+          {/* 安全声明 */}
+          <SafetyBanner compact />
+
           {/* 提醒卡 */}
           {mode === 'long_term' && profile && !recommendation && (
             <ReminderCard
