@@ -82,15 +82,23 @@ class McDonaldsMcpProvider(FoodProvider):
         """查询菜单"""
         try:
             result = await self._call_mcp_tool("list-nutrition-foods")
-            if result and isinstance(result, list):
+            if result and isinstance(result, list) and len(result) > 0:
                 items = [self._to_food_item(i) for i in result]
                 if category:
                     items = [i for i in items if i.category == category]
                 return items
+            else:
+                logger.warning("MCP returned empty list, falling back to mock")
+                return await self._fallback_to_mock(category)
         except Exception as e:
             logger.error(f"MCP list_items error: {e}")
+            return await self._fallback_to_mock(category)
 
-        return []
+    async def _fallback_to_mock(self, category: str = None) -> list[FoodItem]:
+        """降级到 Mock 数据"""
+        from .mock_mcdonalds_provider import MockMcDonaldsProvider
+        mock = MockMcDonaldsProvider()
+        return await mock.list_items(category)
 
     async def get_item_detail(self, item_code: str) -> Optional[FoodItem]:
         """查询菜品详情"""
