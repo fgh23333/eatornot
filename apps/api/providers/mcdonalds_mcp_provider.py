@@ -223,20 +223,31 @@ class McDonaldsMcpProvider(FoodProvider):
                 return None
 
     def _parse_csv_items(self, csv_text: str) -> list[dict]:
-        """解析 CSV 格式的菜品数据"""
+        """解析 CSV 格式的菜品数据
+
+        格式示例:
+        [160]{productName,nutritionDescription,energyKj,energyKcal,protein,fat,carbohydrate,sodium,calcium}:
+          麦辣鸡腿堡,null,1288,308,16,16,24,781,213
+          巨无霸,null,1618,387,23,21,25,846,243
+        """
+        import re
         items = []
         lines = csv_text.strip().split('\n')
 
-        # 跳过第一行（数量信息 [160]）
-        # 第二行是表头
-        if len(lines) < 3:
+        if len(lines) < 2:
             return items
 
-        header_line = lines[1]
-        headers = [h.strip() for h in header_line.replace('{', '').replace('}:', '').split(',')]
+        # 第一行是表头: [160]{productName,...}:
+        header_line = lines[0]
+        # 提取表头字段
+        header_match = re.search(r'\{(.+?)\}', header_line)
+        if not header_match:
+            return items
+
+        headers = [h.strip() for h in header_match.group(1).split(',')]
 
         # 解析数据行
-        for line in lines[2:]:
+        for line in lines[1:]:
             line = line.strip()
             if not line:
                 continue
@@ -247,7 +258,7 @@ class McDonaldsMcpProvider(FoodProvider):
                 for i, header in enumerate(headers):
                     value = values[i] if i < len(values) else ''
                     # 转换数值类型
-                    if value == 'null':
+                    if value == 'null' or value == '':
                         item[header] = None
                     else:
                         try:
@@ -260,17 +271,17 @@ class McDonaldsMcpProvider(FoodProvider):
 
                 # 转换为标准格式
                 product_name = item.get('productName', '')
-                if product_name:
+                if product_name and product_name != 'null':
                     items.append({
                         'name': product_name,
                         'item_code': f'MCD_{len(items)+1:03d}',
                         'category': 'main',
                         'price': 0,  # MCP 不返回价格
-                        'calories': item.get('energyKcal', 0),
-                        'protein': item.get('protein', 0),
-                        'fat': item.get('fat', 0),
-                        'carbohydrate': item.get('carbohydrate', 0),
-                        'sodium': item.get('sodium', 0),
+                        'calories': item.get('energyKcal', 0) or 0,
+                        'protein': item.get('protein', 0) or 0,
+                        'fat': item.get('fat', 0) or 0,
+                        'carbohydrate': item.get('carbohydrate', 0) or 0,
+                        'sodium': item.get('sodium', 0) or 0,
                         'tags': [],
                     })
 
