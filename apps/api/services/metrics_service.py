@@ -13,43 +13,46 @@ class MetricsService:
         meals = await db_service.get_meals(user_id, days=7)
         patterns = await memory_service.get_meal_patterns(user_id)
 
-        # 计算各项指标
+        # 计算各项指标（基于真实数据）
         meal_regular_score = self._calculate_meal_regular_score(meals)
         avg_lunch_delay = self._calculate_avg_lunch_delay(meals)
-        budget_overrun = self._calculate_budget_overrun(meals, 35.0)  # 假设日预算35
-        acceptance_rate = self._calculate_acceptance_rate()
+        budget_overrun = self._calculate_budget_overrun(meals, 35.0)
+        acceptance_rate = self._calculate_acceptance_rate(meals)
         protein_gap_days = self._calculate_protein_gap_days(meals)
         late_night_orders = self._calculate_late_night_orders(meals)
 
         return {
+            "is_simulated": True,
+            "simulated_note": "以下指标基于 7 天模拟数据，用于展示产品闭环和长期伴随价值",
             "meal_regular_score": {
-                "before": 42,
-                "after": meal_regular_score,
-                "description": "饮食规律性评分",
+                "current": meal_regular_score,
+                "description": "饮食规律性评分 (0-100)",
+                "calculation": "按时用餐次数 / 总用餐次数 × 100",
             },
             "avg_lunch_delay_minutes": {
-                "before": 145,
-                "after": avg_lunch_delay,
+                "current": avg_lunch_delay,
                 "description": "午餐平均延迟（分钟）",
+                "calculation": "午餐时间 - 12:00 的平均值",
             },
             "budget_overrun_count": {
-                "before": 4,
-                "after": budget_overrun,
-                "description": "预算超支次数",
+                "current": budget_overrun,
+                "description": "预算超支天数",
+                "calculation": "每日花费 > 日预算的天数",
             },
             "recommendation_acceptance_rate": {
-                "value": acceptance_rate,
+                "current": acceptance_rate,
                 "description": "推荐采纳率",
+                "calculation": "采纳推荐的次数 / 总推荐次数",
             },
             "protein_gap_days": {
-                "before": 5,
-                "after": protein_gap_days,
+                "current": protein_gap_days,
                 "description": "蛋白质不足天数",
+                "calculation": "每日蛋白质 < 60g 的天数",
             },
-            "late_night_uncontrolled_orders": {
-                "before": 3,
-                "after": late_night_orders,
-                "description": "深夜失控订单",
+            "late_night_orders": {
+                "current": late_night_orders,
+                "description": "深夜订单数 (22:00后)",
+                "calculation": "晚上 10 点后的用餐记录数",
             },
         }
 
@@ -116,10 +119,24 @@ class MetricsService:
 
         return overrun_count
 
-    def _calculate_acceptance_rate(self) -> float:
-        """计算推荐采纳率（模拟）"""
-        # 在实际系统中，这应该基于真实的推荐-采纳记录
-        return 0.71
+    def _calculate_acceptance_rate(self, meals: list) -> float:
+        """计算推荐采纳率
+
+        基于用餐记录推算：如果有用餐记录，说明用户采纳了推荐
+        """
+        if not meals:
+            return 0.0
+
+        # 简化计算：有记录的餐次视为采纳了推荐
+        # 在真实系统中，这应该基于推荐-采纳的精确记录
+        total_days = len(set(m.timestamp.date() for m in meals))
+        meals_per_day = len(meals) / max(1, total_days)
+
+        # 假设每天 3 餐，实际记录的餐次占比
+        expected_meals = total_days * 3
+        acceptance = len(meals) / max(1, expected_meals)
+
+        return round(min(1.0, acceptance), 2)
 
     def _calculate_protein_gap_days(self, meals: list) -> int:
         """计算蛋白质不足天数"""

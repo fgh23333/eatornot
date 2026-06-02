@@ -2172,19 +2172,37 @@ body {
   margin-bottom: 20px;
 }
 
-.metrics-panel h3 {
-  margin-bottom: 4px;
+.metrics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
-.metrics-subtitle {
-  font-size: 0.8rem;
+.metrics-header h3 {
+  margin: 0;
+}
+
+.simulated-badge {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  background: #fff3e0;
+  color: var(--yellow);
+  border-radius: 10px;
+}
+
+.simulated-note {
+  font-size: 0.75rem;
   color: var(--text-light);
   margin-bottom: 16px;
+  padding: 8px;
+  background: #f7fafc;
+  border-radius: 6px;
 }
 
 .metrics-grid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
 
@@ -2192,57 +2210,67 @@ body {
   padding: 12px;
   background: #f7fafc;
   border-radius: 8px;
+  text-align: center;
 }
 
 .metric-label {
-  font-size: 0.8rem;
-  color: var(--text-light);
-  margin-bottom: 6px;
-}
-
-.metric-values {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
-}
-
-.metric-before {
-  color: var(--text-light);
-  text-decoration: line-through;
-}
-
-.metric-arrow {
-  color: var(--text-light);
-}
-
-.metric-after {
-  font-weight: 600;
-}
-
-.metric-delta {
-  margin-left: auto;
-  padding: 2px 8px;
-  border-radius: 10px;
   font-size: 0.75rem;
-  font-weight: 600;
+  color: var(--text-light);
+  margin-bottom: 8px;
 }
 
-.metric-delta.improved {
-  background: #e8f5e9;
-  color: var(--green);
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: 700;
 }
 
-.metric-delta.worsened {
-  background: #ffebee;
-  color: var(--red);
-}
-
-.metrics-note {
-  margin-top: 12px;
+.metric-unit {
   font-size: 0.7rem;
   color: var(--text-light);
-  font-style: italic;
+  margin-top: 4px;
+}
+
+.btn-toggle-details {
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--text-light);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-toggle-details:hover {
+  background: #f7fafc;
+}
+
+.metrics-details {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f7fafc;
+  border-radius: 8px;
+}
+
+.detail-item {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+}
+
+.detail-item:last-child {
+  margin-bottom: 0;
+}
+
+.detail-label {
+  font-weight: 600;
+  min-width: 80px;
+}
+
+.detail-value {
+  color: var(--text-light);
 }
 
 /* ============ Why Section (解释层) ============ */
