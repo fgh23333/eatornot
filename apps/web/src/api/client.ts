@@ -305,3 +305,34 @@ export async function getDemoMetrics(userId: string = 'demo-user'): Promise<any>
   const res = await fetch(`${BASE}/api/demo/metrics?user_id=${userId}`)
   return res.json()
 }
+
+export interface OrderResponse {
+  success: boolean
+  order_id: string
+  pay_url: string
+  status: string
+  total_price: number
+  message: string
+  is_mock: boolean
+}
+
+export async function createOrder(plan: RecommendationPlan, storeCode: string = 'S001'): Promise<OrderResponse> {
+  const res = await fetch(`${BASE}/api/order/create`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      user_id: 'demo-user',
+      plan_id: plan.id,
+      items: plan.items.map(item => ({
+        product_code: item.item_code,
+        product_name: item.name,
+        quantity: 1,
+        price: item.price,
+        calories: item.calories,
+      })),
+      store_code: storeCode,
+      order_type: 1,
+    }),
+  })
+  return res.json()
+}

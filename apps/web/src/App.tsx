@@ -5,7 +5,6 @@ import {
   resetProfile,
   fetchRecommendation,
   refinePlan,
-  confirmOrder,
   submitFeedback,
   resetConversation,
   type UserProfile,
@@ -187,17 +186,15 @@ export default function App() {
     setLoading(false)
   }
 
-  // ============ 下单 ============
-  const handleConfirmOrder = async () => {
-    if (!selectedPlan) return
+  // ============ 下单完成回调 ============
+  const handleOrderComplete = (result: { success: boolean; message: string }) => {
     setShowOrderModal(false)
-    try {
-      const result = await confirmOrder(selectedPlan)
-      setOrderResult(`订单 ${result.order_id} 已${result.is_mock ? '模拟' : ''}创建！${result.message}`)
+    if (result.success) {
+      setOrderResult(result.message)
       setShowFeedback(true)
       fetchProfile().then(setProfile)
-    } catch (err) {
-      setOrderResult('下单失败，请重试')
+    } else {
+      setOrderResult(`下单失败：${result.message}`)
     }
   }
 
@@ -422,7 +419,7 @@ export default function App() {
       {showOrderModal && selectedPlan && (
         <OrderConfirmModal
           plan={selectedPlan}
-          onConfirm={handleConfirmOrder}
+          onOrderComplete={handleOrderComplete}
           onClose={() => setShowOrderModal(false)}
         />
       )}
