@@ -61,6 +61,22 @@ class ReminderService:
         reminders.extend(await self._check_budget(user, today_meals))
         reminders.extend(await self._check_late_night(now))
 
+        # LLM 增强提醒消息
+        for i, reminder in enumerate(reminders):
+            enhanced = await self._llm_enhance_message(reminder, user, today_meals)
+            if enhanced:
+                reminders[i] = Reminder(
+                    reminder_id=reminder.reminder_id,
+                    reminder_type=reminder.reminder_type,
+                    title=reminder.title,
+                    message=enhanced,
+                    urgency=reminder.urgency,
+                    suggested_action=reminder.suggested_action,
+                    meal_type=reminder.meal_type,
+                    context=reminder.context,
+                    created_at=reminder.created_at,
+                )
+
         return reminders
 
     async def _check_meal_time(self, user, today_meals: list, now: datetime) -> list[Reminder]:
@@ -256,6 +272,47 @@ class ReminderService:
             ))
 
         return reminders
+
+    async def _llm_enhance_message(self, reminder: Reminder, user, today_meals: list) -> str | None:
+        """用 LLM 生成个性化提醒消息。失败返回 None。"""
+        from core.llm_client import generate_text
+
+        meals_summary = ""
+        if today_meals:
+            items = []
+            for m in today_meals:
+                items.append(f"{m.meal_type}: {m.total_calories:.0f}kcal, ¥{m.total_price:.0f}")
+            meals_summary = "今日已吃: " + "; ".join(items)
+        else:
+            meals_summary = "今日尚未用餐"
+
+        total_cal = sum(m.total_calories for m in today_meals)
+        total_protein = sum(m.total_protein for m in today_meals)
+        bmr = calculate_bmr(user.weight_kg, user.height_cm, user.age, user.sex)
+        tdee = calculate_tdee(bmr, user.activity_level)
+        daily_target = get_daily_calorie_target(tdee, user.goal)
+        budget_remaining = user.daily_budget - sum(m.total_price for m in today_meals)
+
+        goal_map = {"lose_weight": "减脂", "maintain": "维持", "gain_muscle": "增肌"}
+
+        system_prompt = """你是一个关心用户的饮食助手，正在给用户发提醒。语气温暖亲切，像一个贴心的朋友。
+提醒消息要包含具体的营养/预算数据，让用户知道为什么现在该吃饭了。
+消息控制在30字以内，简洁有力。"""
+
+        user_prompt = f"""提醒类型: {reminder.reminder_type.value}
+基础消息: {reminder.message}
+{meals_summary}
+热量进度: {total_cal:.0f}/{daily_target:.0f}kcal
+蛋白质: {total_protein:.0f}g
+预算剩余: ¥{budget_remaining:.0f}
+用户目标: {goal_map.get(user.goal, user.goal)}
+
+请生成一条更个性化的提醒消息。"""
+
+        result = await generate_text(system_prompt, user_prompt)
+        if result and not result.startswith("[LLM"):
+            return result.strip()
+        return None
 
     def build_reminder_card(self, reminder: Reminder) -> dict:
         """构建提醒卡数据"""
