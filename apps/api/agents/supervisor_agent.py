@@ -29,7 +29,7 @@ class SupervisorAgent:
 
         # Run Round Table Debate
         debate_engine = DebateEngine()
-        debate_result = debate_engine.run(agent_debate, context)
+        debate_result = await debate_engine.run(agent_debate, context)
         logger.info(f"Debate completed: {debate_result.debate_id}")
 
         # Build recommendation plans
