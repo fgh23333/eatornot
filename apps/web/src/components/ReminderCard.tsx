@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNotifications } from '../hooks/useNotifications'
 
 interface ReminderButton {
   action: string
@@ -27,11 +28,13 @@ export function ReminderCard({ userId = 'demo-user', onAccept, onSnooze, onDismi
   const [reminders, setReminders] = useState<Reminder[]>([])
   const [loading, setLoading] = useState(true)
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set())
+  const { requestPermission, notify, supported } = useNotifications()
+  const [notifiedIds, setNotifiedIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     fetchReminders()
-    // 每5分钟检查一次提醒
-    const interval = setInterval(fetchReminders, 5 * 60 * 1000)
+    // 每2分钟检查一次提醒
+    const interval = setInterval(fetchReminders, 2 * 60 * 1000)
     return () => clearInterval(interval)
   }, [userId])
 
@@ -44,6 +47,16 @@ export function ReminderCard({ userId = 'demo-user', onAccept, onSnooze, onDismi
         (r: Reminder) => !dismissedIds.has(r.reminder_id)
       )
       setReminders(filtered)
+      // 发送浏览器通知（去重）
+      if (supported) {
+        requestPermission()
+        const newReminders = filtered.filter((r: Reminder) => !notifiedIds.has(r.reminder_id))
+        if (newReminders.length > 0) {
+          const latest = newReminders[0]
+          notify(latest.title, { body: latest.message })
+          setNotifiedIds(prev => new Set([...prev, ...newReminders.map((r: Reminder) => r.reminder_id)]))
+        }
+      }
     } catch (err) {
       console.error('Failed to fetch reminders:', err)
     }
