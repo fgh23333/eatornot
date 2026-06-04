@@ -180,6 +180,53 @@ class McDonaldsMcpProvider(FoodProvider):
             "message": "Order cancelled by user.",
         }
 
+    async def create_order(self, store_code: str, items: list[dict], order_type: int = 1, take_way_code: str = None) -> dict:
+        """通过 MCP 创建真实订单"""
+        try:
+            # 先计算价格确认
+            price_result = await self._call_mcp_tool("calculate-price", {
+                "items": items,
+                "storeCode": store_code,
+                "orderType": order_type,
+            })
+
+            if not price_result or price_result.get("error"):
+                return {"success": False, "message": "价格计算失败，无法下单"}
+
+            # 从价格结果中获取 take_way_code
+            if not take_way_code and isinstance(price_result, dict):
+                take_ways = price_result.get("takeWayList", [])
+                if take_ways:
+                    take_way_code = take_ways[0].get("code", "DINE_IN")
+
+            # 创建订单
+            order_args = {
+                "items": items,
+                "storeCode": store_code,
+                "orderType": order_type,
+            }
+            if take_way_code:
+                order_args["takeWayCode"] = take_way_code
+
+            order_result = await self._call_mcp_tool("create-order", order_args)
+
+            if order_result and isinstance(order_result, dict):
+                return {
+                    "success": True,
+                    "order_id": order_result.get("orderId", str(uuid.uuid4())[:8]),
+                    "pay_url": order_result.get("payUrl", ""),
+                    "status": "pending_payment",
+                    "total_price": order_result.get("totalPrice", 0),
+                    "message": "订单创建成功",
+                    "is_mock": False,
+                }
+
+            return {"success": False, "message": "MCP 未返回有效订单结果"}
+
+        except Exception as e:
+            logger.error(f"create_order error: {e}")
+            return {"success": False, "message": f"下单失败: {str(e)}"}
+
     async def _call_mcp_tool(self, tool_name: str, args: dict = None) -> any:
         """调用 MCP 工具"""
         import json

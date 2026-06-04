@@ -86,17 +86,26 @@ class OrchestratorAgent(BaseAgent):
         """
         message = context.get("message", "").lower()
         mode = context.get("mode", "long_term")
+        user_context = self._build_user_context(context)
 
-        # 1. 分析用户输入，选择 Agent
-        selected = self._select_agents(message, mode)
+        # 1. 尝试 LLM 调度
+        selected = None
+        reason = ""
+        llm_result = await self._llm_select_agents(message, mode, user_context)
+        if llm_result:
+            selected, reason = llm_result
+            logger.info(f"LLM selected agents: {selected} — {reason}")
+        else:
+            # 2. 降级到关键词匹配
+            selected = self._keyword_select(message, mode)
+            reason = self._build_reason(message, selected) + "（降级模式）"
+            logger.info(f"Keyword fallback agents: {selected}")
 
-        # 2. 始终包含 MenuAgent（获取菜品数据）
+        # 3. 始终包含 MenuAgent（获取菜品数据）
         if "menu" not in selected:
             selected.insert(0, "menu")
 
-        logger.info(f"Orchestrator selected agents: {selected}")
-
-        # 3. 并行运行选中的 Agent
+        # 4. 并行运行选中的 Agent
         agents = []
         agent_names = []
         for name in selected:
@@ -108,16 +117,13 @@ class OrchestratorAgent(BaseAgent):
 
         results = await asyncio.gather(*(a.run(context) for a in agents))
 
-        # 4. 构建选择原因
-        reason = self._build_reason(message, selected)
-
         return {
             "selected_agents": agent_names,
             "results": list(results),
             "reason": reason,
         }
 
-    def _select_agents(self, message: str, mode: str) -> list[str]:
+    def _keyword_select(self, message: str, mode: str) -> list[str]:
         """根据用户消息和模式选择需要的 Agent"""
         selected = set(DEFAULT_AGENTS)
 
@@ -145,6 +151,73 @@ class OrchestratorAgent(BaseAgent):
             ])
 
         return list(selected)
+
+    async def _llm_select_agents(self, message: str, mode: str, user_context: str) -> tuple[list[str], str] | None:
+        """用 LLM 理解用户意图，选择需要的 Agent。失败返回 None。"""
+        from core.llm_client import generate_json
+
+        agent_descriptions = {
+            "profile": "用户档案分析 — 根据身高体重目标等档案评估",
+            "weight_loss": "减脂策略 — 热量缺口、减重方案",
+            "nutrition": "营养评估 — 营养素均衡、微量元素",
+            "budget": "预算控制 — 开销策略、性价比",
+            "craving": "情绪性进食 — 情绪状态、食欲管理",
+            "time_context": "时间压力 — 用餐时间、出餐速度",
+            "safety": "过敏安全 — 过敏原、饮食禁忌",
+            "future_simulation": "用餐影响预测 — 这次吃的长期影响",
+        }
+
+        min_agents = 3 if mode == "quick" else 4
+
+        system_prompt = f"""你是饮食决策助手调度器。根据用户输入判断需要哪些专家Agent参与分析。
+
+可选 Agent:
+{chr(10).join(f'- {k}: {v}' for k, v in agent_descriptions.items())}
+
+规则:
+1. menu Agent 始终包含，不需要你选择
+2. {'快速' if mode == 'quick' else '长期'}模式下最少选 {min_agents} 个 Agent
+3. 根据用户意图选择最相关的 Agent，宁多勿少
+4. 返回 JSON"""
+
+        user_prompt = f"用户输入: {message}\n模式: {mode}\n用户背景: {user_context}"
+
+        result = await generate_json(
+            system_prompt,
+            user_prompt,
+            {"selected": ["agent_name1", "agent_name2"], "reason": "选择原因一句话"},
+        )
+
+        if result.get("fallback") or "selected" not in result:
+            return None
+
+        selected = result["selected"]
+        # 校验: 过滤无效名称，保底补齐
+        valid = [s for s in selected if s in AGENT_REGISTRY]
+        if len(valid) < min_agents:
+            for fallback in ["nutrition", "budget", "craving", "profile", "safety"]:
+                if fallback not in valid:
+                    valid.append(fallback)
+                if len(valid) >= min_agents:
+                    break
+
+        return valid, result.get("reason", "LLM 调度选择")
+
+    def _build_user_context(self, context: dict) -> str:
+        """从 context 中提取用户背景摘要给 LLM"""
+        parts = []
+        user = context.get("user")
+        if user:
+            goal_map = {"lose_weight": "减脂", "maintain": "维持", "gain_muscle": "增肌"}
+            parts.append(f"目标: {goal_map.get(user.goal.value, user.goal.value)}")
+            if hasattr(user, "daily_budget") and user.daily_budget:
+                parts.append(f"日预算: {user.daily_budget}元")
+            if hasattr(user, "allergies") and user.allergies:
+                parts.append(f"过敏: {','.join(user.allergies)}")
+        mood = context.get("mood")
+        if mood and mood != "normal":
+            parts.append(f"情绪: {mood}")
+        return "；".join(parts) if parts else "无特殊背景"
 
     def _build_reason(self, message: str, selected: list[str]) -> str:
         """构建选择原因的可读描述"""

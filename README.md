@@ -1,8 +1,10 @@
 # 🍔 EatOrNot
 
-**多 Agent 饮食决策助手**
+**多 Agent 饮食决策助手** — 让 8 个专业 Agent 帮你分析，今天到底吃不吃。
 
-> 今天吃什么？让 8 个专业 Agent 帮你分析。
+> Hackathon 项目 | [协作规范](CLAUDE.md) | [待办事项](TODO.md)
+
+---
 
 ## 这是什么？
 
@@ -10,92 +12,226 @@ EatOrNot 不是简单的菜单推荐工具。它通过**多 Agent 圆桌辩论**
 
 **场景**：你想吃麦当劳，但你在减肥，预算不多，今天还很累。
 
-**传统工具**：给你一个套餐列表。
+| 传统工具 | EatOrNot |
+|----------|----------|
+| 给你一个套餐列表 | 8 个 Agent 并行分析 |
+| 只看价格或销量 | 营养、预算、情绪、安全多维度 |
+| 千人一面 | 基于你的档案和饮食习惯个性化推荐 |
 
-**EatOrNot**：
+**决策流程**：
 1. 8 个 Agent 并行分析（营养、预算、情绪、安全...）
-2. 圆桌辩论，找出冲突点
+2. 4 阶段圆桌辩论，找出冲突点
 3. 形成妥协方案
-4. 给出 3 个有理有据的推荐
+4. 给出 3 个有理有据的推荐（自律/省钱/犒劳）
+
+---
 
 ## 核心特性
 
-- 🤖 **多 Agent 协作** - 8 个专业 Agent 并行分析
-- 💬 **圆桌辩论** - 4 阶段辩论，有理有据
-- 📚 **知识库支撑** - 营养学知识库，不是拍脑袋
-- 🔄 **多轮对话** - 方案可以持续精炼
-- 🎨 **双模式** - 长期管理 + 快速选择
+- 🤖 **多 Agent 协作** — 8 个专业 Agent 并行分析，Orchestrator 智能调度
+- 💬 **圆桌辩论** — 4 阶段辩论（初始判断→发现冲突→形成妥协→最终投票）
+- 📚 **知识库支撑** — 基于《中国居民膳食指南》等权威营养学知识
+- 🔄 **多轮精炼** — 方案可逐轮调整，ActivePlan 支持版本追踪
+- 🎨 **双模式入口** — 长期管理（完整档案）+ 快速选择（极简档案）
+- 🧠 **习惯记忆** — 记录饮食偏好与历史，持续优化推荐
+- ⏰ **饭点提醒** — 基于时间的主动提醒和营养缺口检测
+- 📊 **今日仪表盘** — 实时营养摄入、预算消耗、饮食平衡可视化
+- 🔗 **麦当劳 MCP** — 接入真实麦当劳菜单和价格数据，自动生成订单草稿
+
+---
+
+## 技术栈
+
+| 层 | 技术 |
+|----|------|
+| **后端** | Python 3.12 + FastAPI |
+| **前端** | React 19 + Vite 6 + TypeScript |
+| **LLM** | Cloudflare AI Gateway → Google Gemma 4 |
+| **数据库** | SQLAlchemy + aiosqlite (SQLite) |
+| **Agent 框架** | Google ADK (Agent Development Kit) |
+| **外部数据** | 麦当劳 MCP (Model Context Protocol) |
+
+---
 
 ## 快速开始
 
+### 1. 安装依赖
+
 ```bash
-# 1. 安装依赖
-cd apps/api && pip install -r requirements.txt
-cd ../web && npm install
+# 后端
+cd apps/api
+pip install -r requirements.txt
 
-# 2. 配置环境变量
-cp .env.example .env
-# 编辑 .env 设置 API token
-
-# 3. 启动服务
-cd apps/api && uvicorn main:app --host 127.0.0.1 --port 8001 &
-cd apps/web && npm run dev
-
-# 4. 访问 http://localhost:5173
+# 前端
+cd apps/web
+npm install
 ```
+
+### 2. 配置环境变量
+
+```bash
+cp .env.example .env
+```
+
+编辑 `.env`：
+
+| 变量 | 必填 | 说明 |
+|------|------|------|
+| `CF_AIG_TOKEN` | ✅ | Cloudflare AI Gateway Token |
+| `CF_AIG_BASE_URL` | ✅ | AI Gateway 兼容端点 URL |
+| `GEMMA_MODEL` | ✅ | Gemma 模型 ID（如 `google-ai-studio/gemma-4-31b-it`） |
+| `MCD_MCP_TOKEN` | ❌ | 麦当劳 MCP Token（无则用 Mock 数据） |
+| `DATABASE_URL` | ❌ | SQLite 路径（默认 `./eatornot.db`） |
+
+### 3. 启动
+
+```bash
+# 后端 (port 8001)
+cd apps/api
+uvicorn main:app --host 127.0.0.1 --port 8001
+
+# 前端 (port 5173)
+cd apps/web
+npm run dev
+```
+
+访问 http://localhost:5173
+
+---
 
 ## 项目结构
 
 ```
 eatornot/
 ├── apps/
-│   ├── api/                    # FastAPI 后端
-│   │   ├── agents/             # Agent 层 (核心)
-│   │   │   ├── orchestrator_agent.py  # 智能调度
-│   │   │   ├── supervisor_agent.py    # 方案构建
-│   │   │   ├── debate_engine.py       # 圆桌辩论
-│   │   │   └── ...                    # 8个专业Agent
-│   │   ├── api/                # 路由层
-│   │   ├── services/           # 业务服务
-│   │   └── models/             # 数据模型
-│   └── web/                    # React 前端
-├── knowledge/                  # 知识库
-│   └── nutrition.json          # 营养学知识
-├── CLAUDE.md                   # Claude Code 接手指南
-├── TODO.md                     # 下一步工作
-└── README.md                   # 本文件
+│   ├── api/                          # FastAPI 后端
+│   │   ├── main.py                   # 应用入口
+│   │   ├── core/                     # 基础设施
+│   │   │   ├── config.py             # 环境配置
+│   │   │   ├── database.py           # 数据库连接
+│   │   │   └── llm_client.py         # LLM 调用封装
+│   │   ├── agents/                   # Agent 层 (核心)
+│   │   │   ├── orchestrator_agent.py # 智能调度器
+│   │   │   ├── supervisor_agent.py   # 方案构建器
+│   │   │   ├── debate_engine.py      # 4 阶段圆桌辩论
+│   │   │   └── 8 个专业 Agent        # 各维度分析
+│   │   ├── api/                      # 路由层 (12 个模块)
+│   │   ├── services/                 # 业务服务 (18 个)
+│   │   ├── models/                   # Pydantic 数据模型
+│   │   ├── providers/                # 食物数据源抽象层
+│   │   ├── adk_app/                  # Google ADK 集成
+│   │   └── data/                     # Mock 数据
+│   └── web/                          # React 前端
+│       └── src/
+│           ├── App.tsx               # 主应用
+│           ├── api/client.ts         # API 客户端
+│           └── components/           # 22 个组件
+├── knowledge/                        # 营养学知识库
+│   ├── nutrition.json                # 核心营养数据
+│   ├── nutrition_guidelines/         # 膳食指南
+│   ├── safety/                       # 安全规则
+│   └── weight_loss/                  # 减重规则
+├── skills/                           # ADK Skills (5 个)
+├── docs/                             # 文档
+├── CLAUDE.md                         # 开发指南 + 协作规范
+└── TODO.md                           # 待办事项
 ```
+
+---
 
 ## Agent 列表
 
 | Agent | 职责 | 证据来源 |
 |-------|------|----------|
-| 档案Agent | 分析用户档案 | 《中国居民膳食指南》 |
-| 减脂Agent | 减脂策略 | Mifflin-St Jeor 公式 |
-| 营养Agent | 营养评估 | 《中国食物成分表》 |
-| 预算Agent | 预算控制 | 用户预算设置 |
-| 食欲Agent | 情绪性进食 | 情绪性进食研究 |
-| 时间Agent | 时间压力 | 快餐出餐效率 |
-| 安全Agent | 过敏安全 | 食品过敏原数据库 |
-| 未来模拟Agent | 用餐影响 | 热量-预算平衡模型 |
+| 🧑 档案Agent | 分析用户画像 | 《中国居民膳食指南》 |
+| 🔥 减脂Agent | 减脂策略 & 热量目标 | Mifflin-St Jeor 公式 |
+| 🥗 营养Agent | 营养素评估 | 《中国食物成分表》 |
+| 💰 预算Agent | 预算控制 & 开销策略 | 用户预算设置 |
+| 🍫 食欲Agent | 情绪性进食分析 | 情绪性进食研究 |
+| ⏰ 时间Agent | 时间压力评估 | 快餐出餐效率 |
+| ⚠️ 安全Agent | 过敏 & 饮食安全 | 食品过敏原数据库 |
+| 🔮 未来模拟Agent | 用餐后影响预测 | 热量-预算平衡模型 |
+
+---
+
+## 架构概览
+
+```
+┌─────────────────────────────────────────────┐
+│            React Frontend (5173)             │
+│  ModeSelection → Profile → Debate → Plan    │
+└────────────────────┬────────────────────────┘
+                     │ HTTP/JSON
+┌────────────────────▼────────────────────────┐
+│            FastAPI Backend (8001)            │
+│                                             │
+│  Routes → MealDecisionFlow / RecommendFlow  │
+│              │                              │
+│     OrchestratorAgent (选 3-5 个 Agent)      │
+│              │                              │
+│     8 个 Agent 并行分析 → DebateEngine       │
+│              │                              │
+│     SupervisorAgent → 3 个推荐方案           │
+│              │                              │
+│     AutoDraftService → 订单草稿              │
+│     MemoryService → 习惯记忆                 │
+│     DashboardService → 今日仪表盘            │
+└────────────────────┬────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────┐
+│           Providers (食物数据源)             │
+│  McDonaldsMCP / MockMcDonalds / Manual      │
+└─────────────────────────────────────────────┘
+```
+
+---
 
 ## API 端点
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
 | `/health` | GET | 健康检查 |
-| `/api/recommend` | POST | 获取推荐 |
+| `/api/recommend` | POST | 获取推荐方案 |
+| `/api/decision` | POST | 统一决策入口（含场景检测） |
 | `/api/plan/refine` | POST | 精炼方案 |
-| `/api/order/confirm` | POST | 确认订单 |
-| `/api/feedback` | POST | 提交反馈 |
+| `/api/plan/active` | GET | 获取活跃方案 |
+| `/api/profile/quick` | POST | 快速建档 |
+| `/api/profile` | POST/GET | 完整建档/查询 |
+| `/api/dashboard/today` | GET | 今日仪表盘 |
+| `/api/reminder` | GET | 饭点提醒 |
+| `/api/balance/*` | POST | 营养平衡分析 |
+| `/api/chat` | POST | 对话式交互 |
+| `/api/draft/auto` | POST | 自动生成订单草稿 |
 
-## 下一步
+---
 
-见 `TODO.md`
+## 食物数据源
 
-## 如何让 Claude Code 接手
+系统通过 Provider 抽象层接入食物数据，支持：
 
-见 `CLAUDE.md`
+| Provider | 说明 | 状态 |
+|----------|------|------|
+| `McDonaldsMCPProvider` | 真实麦当劳 MCP | ✅ 已接入 |
+| `MockMcDonaldsProvider` | Mock 数据 | ✅ 降级备用 |
+| `ManualProvider` | 手动输入 | ✅ 已实现 |
+
+---
+
+## 双模式
+
+| 模式 | 输入 | 场景 |
+|------|------|------|
+| 🏋️ 长期管理 | 身高/体重/目标/预算/过敏/口味 | 持续追踪饮食习惯 |
+| ⚡ 快速选择 | 目标/预算/饥饿感/食欲/心情 | 即时决策 |
+
+---
+
+## 相关文档
+
+- [CLAUDE.md](CLAUDE.md) — 开发指南 + 协作规范
+- [TODO.md](TODO.md) — 待办事项
+- [docs/architecture.md](docs/architecture.md) — 详细架构设计
+- [docs/product_plan.md](docs/product_plan.md) — 产品规划
 
 ## License
 

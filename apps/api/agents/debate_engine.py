@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__)
 class DebateEngine:
     """辩论引擎：将独立的 Agent 结果转化为多阶段辩论"""
 
-    def run(self, agent_results: list[AgentResult], context: dict) -> DebateResult:
+    async def run(self, agent_results: list[AgentResult], context: dict) -> DebateResult:
         """
-        运行完整的辩论流程
+        运行完整的辩论流程（LLM优先，算法降级）
 
         Args:
             agent_results: 各 Agent 的独立分析结果
@@ -22,6 +22,15 @@ class DebateEngine:
         Returns:
             DebateResult: 包含4个阶段的辩论结果
         """
+        llm_result = await self._llm_debate(agent_results, context)
+        if llm_result:
+            logger.info(f"LLM debate completed: {llm_result.debate_id}")
+            return llm_result
+        logger.info("Falling back to algorithmic debate")
+        return self._algorithmic_debate(agent_results, context)
+
+    def _algorithmic_debate(self, agent_results: list[AgentResult], context: dict) -> DebateResult:
+        """算法辩论（降级路径）"""
         debate_id = str(uuid.uuid4())[:8]
 
         # Stage 1: 初始意见
@@ -40,6 +49,110 @@ class DebateEngine:
             debate_id=debate_id,
             stages=[stage1, stage2, stage3, stage4],
         )
+
+    async def _llm_debate(self, agent_results: list[AgentResult], context: dict) -> DebateResult | None:
+        """用 LLM 生成 4 阶段辩论。失败返回 None。"""
+        from core.llm_client import generate_json
+        from models.debate import DebateMessage
+
+        filtered = [r for r in agent_results if r.agent_name != "菜单Agent"]
+
+        agent_summaries = []
+        for r in filtered:
+            summary = f"[{r.agent_name}]: 评分={r.score:.1f}, 立场={r.reasons[0] if r.reasons else '无'}"
+            if r.warnings:
+                summary += f", 警告={r.warnings[0]}"
+            agent_summaries.append(summary)
+
+        user = context.get("user")
+        goal_map = {"lose_weight": "减脂", "maintain": "维持", "gain_muscle": "增肌"}
+        user_desc = ""
+        if user:
+            user_desc = f"用户目标: {goal_map.get(user.goal.value, user.goal.value)}, 日预算: {getattr(user, 'daily_budget', '未知')}元"
+
+        system_prompt = """你是一场饮食决策圆桌辩论的主持人。你要根据各专家Agent的分析结果，模拟一场真实的辩论。
+
+辩论规则:
+1. initial_opinions: 每个Agent陈述自己的立场和理由
+2. conflicts: 找出Agent之间真正有逻辑冲突的观点（不只是分数差异，而是理念冲突）
+3. compromise: 主持人提出一个平衡各方意见的妥协方案
+4. final_vote: 每个Agent对妥协方案投票(approve/warn/reject)并说明理由
+
+要求:
+- 辩论内容要有逻辑，像真实的专家讨论
+- 冲突描述要具体（"营养师担心热量超标，但心理顾问认为用户需要情绪安慰"）
+- 妥协方案要平衡，不是简单折中
+- 每个Agent的发言要符合其专业角色
+- 返回合法JSON"""
+
+        user_prompt = f"""专家分析结果:
+{chr(10).join(agent_summaries)}
+
+{user_desc}
+
+请主持这场辩论，返回JSON。"""
+
+        schema_hint = {
+            "stages": [
+                {
+                    "stage": "initial_opinions",
+                    "messages": [{"agent": "name", "position": "立场陈述", "confidence": 0.8}]
+                },
+                {
+                    "stage": "conflicts",
+                    "messages": [{"agent": "name", "conflict_with": "name", "reason": "冲突原因", "confidence": 0.6}]
+                },
+                {
+                    "stage": "compromise",
+                    "messages": [{"agent": "调度Agent", "position": "妥协方案", "accepted_by": ["name1", "name2"], "confidence": 0.7}]
+                },
+                {
+                    "stage": "final_vote",
+                    "messages": [{"agent": "name", "vote": "approve", "warning": "可选警告", "confidence": 0.8}]
+                }
+            ]
+        }
+
+        result = await generate_json(system_prompt, user_prompt, schema_hint)
+
+        if result.get("fallback") or "stages" not in result:
+            return None
+
+        try:
+            stages = []
+            for s in result["stages"]:
+                messages = []
+                for m in s.get("messages", []):
+                    messages.append(DebateMessage(
+                        agent=m.get("agent", ""),
+                        position=m.get("position", ""),
+                        confidence=m.get("confidence", 0.5),
+                        conflict_with=m.get("conflict_with"),
+                        reason=m.get("reason"),
+                        vote=m.get("vote"),
+                        warning=m.get("warning"),
+                        accepted_by=m.get("accepted_by", []),
+                        evidence=[],
+                    ))
+                stage_names = {
+                    "initial_opinions": "第一轮：各Agent初始判断",
+                    "conflicts": "第二轮：发现冲突",
+                    "compromise": "第三轮：形成妥协",
+                    "final_vote": "第四轮：最终投票",
+                }
+                stages.append(DebateStage(
+                    stage=s.get("stage", ""),
+                    title=stage_names.get(s.get("stage", ""), s.get("stage", "")),
+                    messages=messages,
+                ))
+
+            return DebateResult(
+                debate_id=str(uuid.uuid4())[:8],
+                stages=stages,
+            )
+        except Exception as e:
+            logger.error(f"Failed to parse LLM debate result: {e}")
+            return None
 
     def _stage_initial_opinions(self, results: list[AgentResult]) -> DebateStage:
         """Stage 1: 收集各 Agent 的初始意见"""
