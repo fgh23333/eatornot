@@ -284,18 +284,6 @@ export async function getProviderStatus(): Promise<any> {
   return res.json()
 }
 
-export async function getDemoTimeline(userId: string = 'demo-user'): Promise<any> {
-  const res = await fetch(`${BASE}/api/demo/timeline?user_id=${userId}`)
-  return res.json()
-}
-
-export async function simulateWeek(userId: string = 'demo-user'): Promise<any> {
-  const res = await fetch(`${BASE}/api/demo/simulate-week?user_id=${userId}`, {
-    method: 'POST',
-  })
-  return res.json()
-}
-
 export async function getLearningPoints(userId: string = 'demo-user'): Promise<any> {
   const res = await fetch(`${BASE}/api/demo/learning?user_id=${userId}`)
   return res.json()
