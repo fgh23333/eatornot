@@ -14,7 +14,7 @@ import SafetyBanner from '@/components/SafetyBanner.vue'
 import ProviderBadge from '@/components/ProviderBadge.vue'
 import ResetButtons from '@/components/ResetButtons.vue'
 import FeedbackFormInline from '@/components/FeedbackFormInline.vue'
-import { Button, Card, CardContent } from '@/components/ui'
+import { Button, Card, CardContent, TabsRoot, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
 import BalanceMode from '@/components/BalanceMode.vue'
 import LearningPanel from '@/components/LearningPanel.vue'
 import MetricsPanel from '@/components/MetricsPanel.vue'
@@ -38,16 +38,15 @@ function handleFeedbackSubmit(satisfaction: number, notes: string) {
   <QuickProfileForm v-else-if="store.phase.value === 'quick_form'" @complete="store.completeQuickProfile" />
 
   <!-- Phase 4: Main App -->
-  <div v-else class="min-h-screen bg-gray-50">
+  <div v-else class="h-screen flex flex-col bg-gray-50">
     <!-- Header -->
-    <header class="bg-white border-b sticky top-0 z-40">
-      <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <header class="bg-white border-b flex-shrink-0 z-40">
+      <div class="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between">
         <div class="flex items-center gap-3">
           <h1 class="text-xl font-bold">🍔 EatOrNot</h1>
           <span class="px-2 py-0.5 rounded-full text-xs bg-orange-100 text-orange-700">
             {{ store.mode.value === 'long_term' ? '长期管理' : '快速选择' }}
           </span>
-          <!-- Compact profile in header -->
           <span v-if="store.profile.value" class="hidden md:inline text-xs text-muted-foreground">
             {{ store.profile.value.goal }} · ¥{{ store.profile.value.daily_budget }}/天
           </span>
@@ -59,39 +58,39 @@ function handleFeedbackSubmit(satisfaction: number, notes: string) {
       </div>
     </header>
 
-    <div class="max-w-7xl mx-auto px-4 py-4 flex gap-4">
-      <!-- Sidebar: sticky, independent scroll, max viewport height -->
+    <!-- Body: sidebar + main, fills remaining height -->
+    <div class="flex-1 min-h-0 max-w-7xl mx-auto w-full px-4 py-3 flex gap-4">
+      <!-- Sidebar: Tab-based, no scroll needed -->
       <aside v-if="store.mode.value === 'long_term' && store.profile.value"
-        class="w-72 flex-shrink-0 space-y-3 hidden lg:block sticky top-[57px] h-[calc(100vh-73px)] overflow-y-auto pb-4 pr-1">
-        <TodayDashboard :user-id="store.profile.value.user_id"
-          @request-recommend="(mt) => { store.inputValue.value = `帮我选${mt === 'breakfast' ? '早餐' : mt === 'lunch' ? '午餐' : '晚餐'}`; store.handleRecommend() }" />
-        <AutoDraft :user-id="store.profile.value.user_id"
-          @confirm="(d) => { store.orderResult.value = `订单已确认！共 ${d.items.length} 件，¥${d.total_price}` }" />
-        <BalanceMode :user-id="store.profile.value.user_id" mood="normal" />
-        <!-- Collapsible sections -->
-        <details class="group">
-          <summary class="cursor-pointer text-sm font-medium py-2 px-1 flex items-center justify-between hover:bg-gray-50 rounded">
-            <span>🧠 学习记录</span>
-            <span class="text-xs text-muted-foreground group-open:rotate-180 transition-transform">▼</span>
-          </summary>
-          <div class="mt-1">
+        class="w-72 flex-shrink-0 hidden lg:flex flex-col">
+        <TabsRoot default-value="status" class="flex flex-col flex-1 min-h-0">
+          <TabsList class="flex-shrink-0">
+            <TabsTrigger value="status">📊 状态</TabsTrigger>
+            <TabsTrigger value="mode">🎯 模式</TabsTrigger>
+            <TabsTrigger value="data">📈 数据</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="status" class="flex-1 min-h-0 overflow-y-auto mt-3 space-y-3 pr-1">
+            <TodayDashboard :user-id="store.profile.value.user_id"
+              @request-recommend="(mt) => { store.inputValue.value = `帮我选${mt === 'breakfast' ? '早餐' : mt === 'lunch' ? '午餐' : '晚餐'}`; store.handleRecommend() }" />
+            <AutoDraft :user-id="store.profile.value.user_id"
+              @confirm="(d) => { store.orderResult.value = `订单已确认！共 ${d.items.length} 件，¥${d.total_price}` }" />
+          </TabsContent>
+
+          <TabsContent value="mode" class="flex-1 min-h-0 overflow-y-auto mt-3 space-y-3 pr-1">
+            <BalanceMode :user-id="store.profile.value.user_id" mood="normal" />
+            <ProfileCard :profile="store.profile.value" />
+          </TabsContent>
+
+          <TabsContent value="data" class="flex-1 min-h-0 overflow-y-auto mt-3 space-y-3 pr-1">
             <LearningPanel :user-id="store.profile.value.user_id" />
-          </div>
-        </details>
-        <details class="group">
-          <summary class="cursor-pointer text-sm font-medium py-2 px-1 flex items-center justify-between hover:bg-gray-50 rounded">
-            <span>📈 本周统计</span>
-            <span class="text-xs text-muted-foreground group-open:rotate-180 transition-transform">▼</span>
-          </summary>
-          <div class="mt-1">
             <MetricsPanel :user-id="store.profile.value.user_id" />
-          </div>
-        </details>
-        <ProfileCard :profile="store.profile.value" />
+          </TabsContent>
+        </TabsRoot>
       </aside>
 
-      <!-- Main Content -->
-      <main class="flex-1 min-w-0 space-y-4">
+      <!-- Main Content: scrollable -->
+      <main class="flex-1 min-w-0 min-h-0 overflow-y-auto space-y-4 pr-1">
         <SafetyBanner compact />
 
         <!-- Reminders -->
