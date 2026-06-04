@@ -1,5 +1,9 @@
+import { ref } from 'vue'
+
 export function useNotifications() {
-  const requestPermission = async (): Promise<boolean> => {
+  const supported = ref('Notification' in window)
+
+  async function requestPermission(): Promise<boolean> {
     if (!('Notification' in window)) return false
     if (Notification.permission === 'granted') return true
     if (Notification.permission === 'denied') return false
@@ -7,7 +11,7 @@ export function useNotifications() {
     return result === 'granted'
   }
 
-  const notify = (title: string, options?: NotificationOptions) => {
+  function notify(title: string, options?: NotificationOptions) {
     if (!('Notification' in window) || Notification.permission !== 'granted') return
     if (document.visibilityState === 'visible') return
     const notification = new Notification(title, {
@@ -20,5 +24,5 @@ export function useNotifications() {
     }
   }
 
-  return { requestPermission, notify, supported: 'Notification' in window }
+  return { requestPermission, notify, supported }
 }
