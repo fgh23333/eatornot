@@ -1,12 +1,19 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle, Button, Progress } from '@/components/ui'
 import type { RecommendationPlan } from '@/api/client'
+import { useAppStore } from '@/composables/useAppStore'
 
-defineProps<{ plan: RecommendationPlan }>()
+const props = defineProps<{ plan: RecommendationPlan }>()
 const emit = defineEmits<{ 'refine': [message: string]; 'confirm': [] }>()
 
+const { profile } = useAppStore()
 const refineInput = ref('')
+
+const budgetPercent = computed(() => {
+  const budget = profile.value?.daily_budget || 50
+  return Math.min((props.plan.estimated_price / budget) * 100, 100)
+})
 </script>
 
 <template>
@@ -27,7 +34,7 @@ const refineInput = ref('')
       </div>
       <div class="space-y-1">
         <div class="text-xs text-muted-foreground">预算使用</div>
-        <Progress :value="parseFloat(plan.budget_impact) || 0" />
+        <Progress :value="budgetPercent" />
       </div>
       <div class="flex gap-2">
         <textarea v-model="refineInput" class="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm" rows="2" placeholder="想调整什么？" />

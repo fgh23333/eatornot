@@ -1,16 +1,12 @@
 <script setup lang="ts">
-import { Card, CardContent } from '@/components/ui'
 import type { UserProfile } from '@/api/client'
 
 defineProps<{ profile: UserProfile }>()
 </script>
 
 <template>
-  <Card>
-    <CardContent class="p-4 text-sm space-y-1">
-      <div class="font-medium">{{ profile.name }}</div>
-      <div class="text-muted-foreground">{{ profile.goal }} · ¥{{ profile.daily_budget }}/天</div>
-      <div class="text-muted-foreground">{{ profile.height_cm }}cm · {{ profile.weight_kg }}kg · {{ profile.age }}岁</div>
-    </CardContent>
-  </Card>
+  <div class="text-xs text-muted-foreground py-2 border-t">
+    <div class="font-medium text-foreground">{{ profile.name }}</div>
+    <div>{{ profile.height_cm }}cm · {{ profile.weight_kg }}kg · {{ profile.age }}岁</div>
+  </div>
 </template>

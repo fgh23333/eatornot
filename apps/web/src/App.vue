@@ -47,6 +47,10 @@ function handleFeedbackSubmit(satisfaction: number, notes: string) {
           <span class="px-2 py-0.5 rounded-full text-xs bg-orange-100 text-orange-700">
             {{ store.mode.value === 'long_term' ? '长期管理' : '快速选择' }}
           </span>
+          <!-- Compact profile in header -->
+          <span v-if="store.profile.value" class="hidden md:inline text-xs text-muted-foreground">
+            {{ store.profile.value.goal }} · ¥{{ store.profile.value.daily_budget }}/天
+          </span>
         </div>
         <div class="flex items-center gap-2">
           <ProviderBadge />
@@ -56,15 +60,33 @@ function handleFeedbackSubmit(satisfaction: number, notes: string) {
     </header>
 
     <div class="max-w-7xl mx-auto px-4 py-4 flex gap-4">
-      <!-- Sidebar -->
-      <aside v-if="store.mode.value === 'long_term' && store.profile.value" class="w-72 flex-shrink-0 space-y-4 hidden lg:block">
+      <!-- Sidebar: sticky, independent scroll, max viewport height -->
+      <aside v-if="store.mode.value === 'long_term' && store.profile.value"
+        class="w-72 flex-shrink-0 space-y-3 hidden lg:block sticky top-[57px] h-[calc(100vh-73px)] overflow-y-auto pb-4 pr-1">
         <TodayDashboard :user-id="store.profile.value.user_id"
           @request-recommend="(mt) => { store.inputValue.value = `帮我选${mt === 'breakfast' ? '早餐' : mt === 'lunch' ? '午餐' : '晚餐'}`; store.handleRecommend() }" />
         <AutoDraft :user-id="store.profile.value.user_id"
           @confirm="(d) => { store.orderResult.value = `订单已确认！共 ${d.items.length} 件，¥${d.total_price}` }" />
         <BalanceMode :user-id="store.profile.value.user_id" mood="normal" />
-        <LearningPanel :user-id="store.profile.value.user_id" />
-        <MetricsPanel :user-id="store.profile.value.user_id" />
+        <!-- Collapsible sections -->
+        <details class="group">
+          <summary class="cursor-pointer text-sm font-medium py-2 px-1 flex items-center justify-between hover:bg-gray-50 rounded">
+            <span>🧠 学习记录</span>
+            <span class="text-xs text-muted-foreground group-open:rotate-180 transition-transform">▼</span>
+          </summary>
+          <div class="mt-1">
+            <LearningPanel :user-id="store.profile.value.user_id" />
+          </div>
+        </details>
+        <details class="group">
+          <summary class="cursor-pointer text-sm font-medium py-2 px-1 flex items-center justify-between hover:bg-gray-50 rounded">
+            <span>📈 本周统计</span>
+            <span class="text-xs text-muted-foreground group-open:rotate-180 transition-transform">▼</span>
+          </summary>
+          <div class="mt-1">
+            <MetricsPanel :user-id="store.profile.value.user_id" />
+          </div>
+        </details>
         <ProfileCard :profile="store.profile.value" />
       </aside>
 
