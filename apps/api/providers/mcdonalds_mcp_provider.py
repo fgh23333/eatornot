@@ -32,7 +32,6 @@ class McDonaldsMcpProvider(FoodProvider):
             )
 
         try:
-            # 尝试调用 MCP 获取菜单
             items = await self._call_mcp_tool("list-nutrition-foods")
             if items and len(items) > 0:
                 return ProviderStatus(
@@ -56,20 +55,27 @@ class McDonaldsMcpProvider(FoodProvider):
                 message=f"McDonald's MCP error: {str(e)}",
             )
 
-    async def list_stores(self) -> list[Store]:
+    async def list_stores(self, city: str = "南京", keyword: str = "麦当劳") -> list[Store]:
         """查询附近门店"""
         try:
-            result = await self._call_mcp_tool("query-nearby-stores")
+            result = await self._call_mcp_tool("query-nearby-stores", {
+                "beType": 1,
+                "searchType": 2,
+                "city": city,
+                "keyword": keyword,
+            })
             if result and isinstance(result, list):
-                return [
-                    Store(
-                        store_id=s.get("store_id", ""),
-                        name=s.get("name", ""),
-                        distance_km=s.get("distance_km", 0),
-                        is_open=s.get("is_open", True),
-                    )
-                    for s in result
-                ]
+                stores = []
+                for s in result:
+                    if isinstance(s, dict):
+                        stores.append(Store(
+                            store_id=str(s.get("storeCode", s.get("store_id", ""))),
+                            name=s.get("storeName", s.get("name", "")),
+                            distance_km=s.get("distance", s.get("distance_km", 0)),
+                            is_open=s.get("isOpen", s.get("is_open", True)),
+                        ))
+                if stores:
+                    return stores
         except Exception as e:
             logger.error(f"MCP list_stores error: {e}")
 
@@ -79,23 +85,21 @@ class McDonaldsMcpProvider(FoodProvider):
         ]
 
     async def list_items(self, category: str = None) -> list[FoodItem]:
-        """查询菜单"""
+        """查询菜单 — 优先使用 query-meals（含价格），降级到 list-nutrition-foods"""
+        try:
+            # 优先用 query-meals 获取完整菜单（含价格）
+            items = await self.query_meals(store_code="S001", order_type=1, be_type=1)
+            if items and len(items) > 0:
+                if category:
+                    items = [i for i in items if i.category == category]
+                return items
+        except Exception as e:
+            logger.warning(f"query-meals failed, trying list-nutrition-foods: {e}")
+
+        # 降级到 list-nutrition-foods（只有营养数据，无价格）
         try:
             result = await self._call_mcp_tool("list-nutrition-foods")
-
-            # 解析结果
-            items_data = []
-            if result and isinstance(result, list):
-                items_data = result
-            elif result and isinstance(result, dict) and "data" in result:
-                data = result["data"]
-                if isinstance(data, list):
-                    items_data = data
-                elif isinstance(data, str):
-                    # 尝试解析 CSV 格式
-                    parsed = self._parse_csv_items(data)
-                    if parsed:
-                        items_data = parsed
+            items_data = self._extract_items_data(result)
 
             if items_data and len(items_data) > 0:
                 items = [self._to_food_item(i) for i in items_data]
@@ -109,6 +113,19 @@ class McDonaldsMcpProvider(FoodProvider):
             logger.error(f"MCP list_items error: {e}")
             return await self._fallback_to_mock(category)
 
+    async def query_meals(self, store_code: str = "S001", order_type: int = 1, be_type: int = 1) -> list[FoodItem]:
+        """按门店+订单类型查询菜单 (MCP query-meals)"""
+        result = await self._call_mcp_tool("query-meals", {
+            "storeCode": store_code,
+            "orderType": order_type,
+            "beType": be_type,
+        })
+
+        items_data = self._extract_items_data(result)
+        if items_data:
+            return [self._to_food_item(i) for i in items_data]
+        return []
+
     async def _fallback_to_mock(self, category: str = None) -> list[FoodItem]:
         """降级到 Mock 数据"""
         logger.warning("Falling back to Mock data because MCP returned empty or failed")
@@ -119,7 +136,12 @@ class McDonaldsMcpProvider(FoodProvider):
     async def get_item_detail(self, item_code: str) -> Optional[FoodItem]:
         """查询菜品详情"""
         try:
-            result = await self._call_mcp_tool("query-meal-detail", {"item_code": item_code})
+            result = await self._call_mcp_tool("query-meal-detail", {
+                "code": item_code,
+                "storeCode": "S001",
+                "orderType": 1,
+                "beType": 1,
+            })
             if result and isinstance(result, dict):
                 return self._to_food_item(result)
         except Exception as e:
@@ -130,7 +152,14 @@ class McDonaldsMcpProvider(FoodProvider):
     async def calculate_price(self, item_codes: list[str]) -> dict:
         """计算价格"""
         try:
-            result = await self._call_mcp_tool("calculate-price", {"items": item_codes})
+            # 将 item_codes 转为 MCP 需要的格式
+            items = [{"productCode": code, "quantity": 1} for code in item_codes]
+            result = await self._call_mcp_tool("calculate-price", {
+                "items": items,
+                "storeCode": "S001",
+                "orderType": 1,
+                "beType": 1,
+            })
             if result and isinstance(result, dict):
                 return result
         except Exception as e:
@@ -141,9 +170,12 @@ class McDonaldsMcpProvider(FoodProvider):
     async def create_order_draft(self, item_codes: list[str], store_id: str = None) -> dict:
         """创建订单草稿"""
         try:
+            items = [{"productCode": code, "quantity": 1} for code in item_codes]
             result = await self._call_mcp_tool("create-order", {
-                "items": item_codes,
-                "store_id": store_id or "S001",
+                "items": items,
+                "storeCode": store_id or "S001",
+                "orderType": 1,
+                "beType": 1,
             })
             if result and isinstance(result, dict):
                 return {
@@ -188,6 +220,7 @@ class McDonaldsMcpProvider(FoodProvider):
                 "items": items,
                 "storeCode": store_code,
                 "orderType": order_type,
+                "beType": 1,
             })
 
             if not price_result or price_result.get("error"):
@@ -204,6 +237,7 @@ class McDonaldsMcpProvider(FoodProvider):
                 "items": items,
                 "storeCode": store_code,
                 "orderType": order_type,
+                "beType": 1,
             }
             if take_way_code:
                 order_args["takeWayCode"] = take_way_code
@@ -269,14 +303,31 @@ class McDonaldsMcpProvider(FoodProvider):
 
                 return None
 
-    def _parse_csv_items(self, csv_text: str) -> list[dict]:
-        """解析 CSV 格式的菜品数据
+    def _extract_items_data(self, result) -> list[dict]:
+        """从 MCP 响应中提取菜品数据列表"""
+        if not result:
+            return []
+        if isinstance(result, list):
+            return result
+        if isinstance(result, dict):
+            # 尝试常见嵌套结构
+            for key in ("data", "items", "foods", "meals"):
+                data = result.get(key)
+                if isinstance(data, list):
+                    return data
+                elif isinstance(data, str):
+                    parsed = self._parse_csv_items(data)
+                    if parsed:
+                        return parsed
+            # 如果响应本身包含菜品字段
+            if result.get("productName") or result.get("name"):
+                return [result]
+        if isinstance(result, str):
+            return self._parse_csv_items(result)
+        return []
 
-        格式示例:
-        [160]{productName,nutritionDescription,energyKj,energyKcal,protein,fat,carbohydrate,sodium,calcium}:
-          麦辣鸡腿堡,null,1288,308,16,16,24,781,213
-          巨无霸,null,1618,387,23,21,25,846,243
-        """
+    def _parse_csv_items(self, csv_text: str) -> list[dict]:
+        """解析 CSV 格式的菜品数据"""
         import re
         items = []
         lines = csv_text.strip().split('\n')
@@ -284,16 +335,13 @@ class McDonaldsMcpProvider(FoodProvider):
         if len(lines) < 2:
             return items
 
-        # 第一行是表头: [160]{productName,...}:
         header_line = lines[0]
-        # 提取表头字段
         header_match = re.search(r'\{(.+?)\}', header_line)
         if not header_match:
             return items
 
         headers = [h.strip() for h in header_match.group(1).split(',')]
 
-        # 解析数据行
         for line in lines[1:]:
             line = line.strip()
             if not line:
@@ -304,7 +352,6 @@ class McDonaldsMcpProvider(FoodProvider):
                 item = {}
                 for i, header in enumerate(headers):
                     value = values[i] if i < len(values) else ''
-                    # 转换数值类型
                     if value == 'null' or value == '':
                         item[header] = None
                     else:
@@ -316,14 +363,13 @@ class McDonaldsMcpProvider(FoodProvider):
                         except ValueError:
                             item[header] = value
 
-                # 转换为标准格式
                 product_name = item.get('productName', '')
                 if product_name and product_name != 'null':
                     items.append({
                         'name': product_name,
                         'item_code': f'MCD_{len(items)+1:03d}',
                         'category': 'main',
-                        'price': 0,  # MCP 不返回价格
+                        'price': 0,
                         'calories': item.get('energyKcal', 0) or 0,
                         'protein': item.get('protein', 0) or 0,
                         'fat': item.get('fat', 0) or 0,
@@ -335,16 +381,25 @@ class McDonaldsMcpProvider(FoodProvider):
         return items
 
     def _to_food_item(self, data: dict) -> FoodItem:
-        """将 dict 转换为 FoodItem"""
+        """将 dict 转换为 FoodItem — 兼容真实 MCP 和 Mock 两种字段名"""
+        # 真实 MCP 返回 productName/productCode/price(分)
+        # Mock 返回 name/item_code/price(元)
+        name = data.get("productName", data.get("name", ""))
+        item_code = str(data.get("productCode", data.get("item_code", "")))
+        price_raw = data.get("price", 0) or 0
+        # 真实 MCP 价格单位是分，需要除以 100；Mock 直接是元
+        # 判断依据：价格 > 100 认为是分
+        price = price_raw / 100 if price_raw > 100 else price_raw
+
         return FoodItem(
-            name=data.get("name", ""),
-            item_code=data.get("item_code", ""),
-            category=data.get("category", ""),
-            price=data.get("price", 0),
-            calories=data.get("calories", 0),
-            protein=data.get("protein", 0),
-            fat=data.get("fat", 0),
-            carbohydrate=data.get("carbohydrate", 0),
-            sodium=data.get("sodium", 0),
+            name=name,
+            item_code=item_code,
+            category=data.get("category", "main"),
+            price=round(price, 2),
+            calories=data.get("calories", data.get("energyKcal", 0)) or 0,
+            protein=data.get("protein", 0) or 0,
+            fat=data.get("fat", 0) or 0,
+            carbohydrate=data.get("carbohydrate", 0) or 0,
+            sodium=data.get("sodium", 0) or 0,
             tags=data.get("tags", []),
         )
