@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useNotifications } from '@/composables/useNotifications'
 import { Button } from '@/components/ui'
+import TerminalSkillBanner from '@/components/TerminalSkillBanner.vue'
 
 const { pushEnabled, pushSupported, enablePush, disablePush, initPush, notify } = useNotifications()
 
@@ -139,6 +140,9 @@ onUnmounted(() => {
       <div v-else class="p-4 text-center text-sm text-gray-400">
         暂无新提醒
       </div>
+
+      <!-- Terminal skill tip -->
+      <TerminalSkillBanner compact />
     </div>
   </div>
 </template>

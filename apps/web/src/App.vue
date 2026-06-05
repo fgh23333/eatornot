@@ -21,6 +21,7 @@ import MetricsPanel from '@/components/MetricsPanel.vue'
 import ProfileCard from '@/components/ProfileCard.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 import ReminderBell from '@/components/ReminderBell.vue'
+import TerminalSkillBanner from '@/components/TerminalSkillBanner.vue'
 
 const store = useAppStore()
 
@@ -166,9 +167,10 @@ function handleFeedbackSubmit(satisfaction: number, notes: string) {
               <RoundTableDebate :debate="store.recommendation.value.debate" />
             </div>
           </div>
+          <div class="mt-4">
+            <TerminalSkillBanner />
+          </div>
         </div>
-
-        <!-- Selected Plan -->
         <div v-if="store.selectedPlan.value">
           <ActivePlanPanel :plan="store.selectedPlan.value"
             @refine="store.handleRefine" @confirm="store.showOrderModal.value = true" />

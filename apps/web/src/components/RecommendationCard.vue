@@ -79,7 +79,8 @@ function kcalLevel(cal: number) {
     <div class="px-4 py-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
       <div class="flex items-center gap-1.5">
         <span class="text-base">💰</span>
-        <span class="font-bold text-gray-900">¥{{ plan.estimated_price.toFixed(0) }}</span>
+        <span v-if="plan.estimated_price > 0" class="font-bold text-gray-900">¥{{ plan.estimated_price.toFixed(0) }}</span>
+        <span v-else class="font-bold text-green-600 text-xs px-2 py-0.5 rounded-full bg-green-50">预算内</span>
       </div>
       <div class="flex items-center gap-1.5">
         <span class="text-base">🔥</span>

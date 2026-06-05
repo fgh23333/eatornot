@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button } from '@/components/ui'
+import TerminalSkillBanner from '@/components/TerminalSkillBanner.vue'
 
 defineEmits<{
   'select-mode': [mode: 'long_term' | 'quick']
@@ -33,7 +34,8 @@ defineEmits<{
             <Button class="w-full" size="lg">开始建档</Button>
           </CardContent>
         </Card>
-        <Card class="cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-200 border-amber-200" @click="$emit('select-mode', 'quick')">
+        <Card class="cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-200 border-amber-200 relative" @click="$emit('select-mode', 'quick')">
+          <div class="absolute -top-2 -right-2 bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">推荐</div>
           <CardHeader>
             <div class="text-4xl mb-2">⚡</div>
             <CardTitle class="text-xl">就这顿帮我选一下</CardTitle>
@@ -49,6 +51,9 @@ defineEmits<{
             <Button variant="outline" class="w-full border-amber-300 text-amber-700 hover:bg-amber-50" size="lg">快速选择</Button>
           </CardContent>
         </Card>
+      </div>
+      <div class="mt-6">
+        <TerminalSkillBanner />
       </div>
       <p class="text-center text-xs text-gray-400 mt-8">⚕️ 本工具仅供参考，不构成医疗建议。</p>
     </div>
