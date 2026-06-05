@@ -37,9 +37,10 @@ Thumbs.db
 # RAG/Vector DB
 knowledge/chroma_db/
 
-# Claude Code
+# Claude Code (local config ignored, but project setup templates tracked in scripts/)
 .claude/
 .env
+!scripts/claude-setup/
 
 # Wrangler
 .wrangler/

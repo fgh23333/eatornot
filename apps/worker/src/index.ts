@@ -372,4 +372,126 @@ function mockRecommend(message: string) {
   }
 }
 
-export default app
+// ============ Push Subscriptions ============
+app.get('/api/push/vapid-public-key', (c) => {
+  const pk = c.env.VAPID_PUBLIC_KEY
+  if (!pk) return c.json({ error: 'VAPID not configured' }, 503)
+  return c.json({ publicKey: pk })
+})
+
+app.post('/api/push/subscribe', async (c) => {
+  const body = await c.req.json()
+  const userId = body.user_id || 'demo-user'
+  const sub = body.subscription
+  if (!sub?.endpoint) return c.json({ error: 'Missing subscription' }, 400)
+  try {
+    await c.env.DB.prepare(
+      `INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, created_at)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(endpoint) DO UPDATE SET
+       user_id=excluded.user_id, p256dh=excluded.p256dh, auth=excluded.auth, created_at=excluded.created_at`
+    ).bind(userId, sub.endpoint, sub.keys?.p256dh || '', sub.keys?.auth || '', new Date().toISOString()).run()
+    return c.json({ success: true })
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500)
+  }
+})
+
+app.post('/api/push/unsubscribe', async (c) => {
+  const body = await c.req.json()
+  const endpoint = body.endpoint
+  if (!endpoint) return c.json({ error: 'Missing endpoint' }, 400)
+  try {
+    await c.env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').bind(endpoint).run()
+    return c.json({ success: true })
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500)
+  }
+})
+
+// ============ Reminders (with cron-generated data) ============
+app.get('/api/reminders', async (c) => {
+  const userId = c.req.query('user_id') || 'demo-user'
+  try {
+    const rows = await c.env.DB.prepare(
+      `SELECT * FROM meal_reminders
+       WHERE date = ? AND (acknowledged_by IS NULL OR acknowledged_by NOT LIKE ?)
+       ORDER BY sent_at DESC LIMIT 3`
+    ).bind(new Date().toISOString().split('T')[0], `%${userId}%`).all()
+    const reminders = (rows.results || []).map((r: any) => ({
+      id: r.id,
+      meal_type: r.meal_type,
+      sent_at: r.sent_at,
+      recommendation: JSON.parse(String(r.recommendation_json || '{}')),
+    }))
+    return c.json({ reminders })
+  } catch {
+    return c.json({ reminders: [] })
+  }
+})
+
+app.post('/api/reminders/:id/ack', async (c) => {
+  const id = c.req.param('id')
+  const userId = (await c.req.json()).user_id || 'demo-user'
+  try {
+    await c.env.DB.prepare(
+      `UPDATE meal_reminders SET acknowledged_by = COALESCE(acknowledged_by || ',', '') || ? WHERE id = ?`
+    ).bind(userId, id).run()
+    return c.json({ success: true })
+  } catch {
+    return c.json({ success: false }, 500)
+  }
+})
+
+// ============ Scheduled (Cron) ============
+async function handleCron(env: Bindings) {
+  const hour = new Date().getUTCHours()
+  let mealType = '晚餐'
+  if (hour >= 0 && hour < 4) mealType = '早餐'
+  else if (hour >= 4 && hour < 8) mealType = '午餐'
+
+  const recommendation = await callGemini(
+    env.GEMINI_API_KEY,
+    `帮我搭配${mealType}`,
+    'quick',
+    env.AI_GATEWAY_ID
+  )
+
+  await env.DB.prepare(
+    `INSERT INTO meal_reminders (meal_type, date, recommendation_json, sent_at)
+     VALUES (?, ?, ?, ?)`
+  ).bind(mealType, new Date().toISOString().split('T')[0], JSON.stringify(recommendation), new Date().toISOString()).run()
+
+  // TODO: send Web Push to all subscriptions
+  console.log(`[Cron] ${mealType} reminder generated at ${new Date().toISOString()}`)
+}
+
+async function ensureTables(db: D1Database) {
+  await db.prepare(`CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT,
+    endpoint TEXT UNIQUE,
+    p256dh TEXT,
+    auth TEXT,
+    created_at TEXT
+  )`).run()
+  await db.prepare(`CREATE TABLE IF NOT EXISTS meal_reminders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    meal_type TEXT,
+    date TEXT,
+    recommendation_json TEXT,
+    sent_at TEXT,
+    acknowledged_by TEXT
+  )`).run()
+}
+
+export default {
+  async fetch(req: Request, env: Bindings, ctx: ExecutionContext) {
+    await ensureTables(env.DB)
+    return app.fetch(req, env)
+  },
+  async scheduled(event: ScheduledEvent, env: Bindings, ctx: ExecutionContext) {
+    await ensureTables(env.DB)
+    await handleCron(env)
+  },
+}
