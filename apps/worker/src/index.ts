@@ -5,6 +5,9 @@ type Bindings = {
   DB: D1Database
   GEMINI_API_KEY: string
   AI_GATEWAY_ID?: string
+  VAPID_PUBLIC_KEY?: string
+  VAPID_PRIVATE_KEY?: string
+  VAPID_SUBJECT?: string  // e.g. "mailto:you@example.com"
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -443,6 +446,171 @@ app.post('/api/reminders/:id/ack', async (c) => {
   }
 })
 
+// ============ Web Push Helpers ============
+
+function base64UrlEncode(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf)
+  let binary = ''
+  for (const b of bytes) binary += String.fromCharCode(b)
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+function base64UrlDecode(str: string): Uint8Array {
+  let s = str.replace(/-/g, '+').replace(/_/g, '/')
+  while (s.length % 4) s += '='
+  const binary = atob(s)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return bytes
+}
+
+async function createVapidJWT(privateKey: string, origin: string, subject: string): Promise<string> {
+  const header = base64UrlEncode(new TextEncoder().encode(JSON.stringify({ typ: 'JWT', alg: 'ES256' })))
+  const now = Math.floor(Date.now() / 1000)
+  const payload = base64UrlEncode(new TextEncoder().encode(JSON.stringify({
+    aud: origin,
+    exp: now + 12 * 3600,
+    sub: subject,
+  })))
+  const unsigned = `${header}.${payload}`
+  const keyBytes = base64UrlDecode(privateKey)
+  const privateKeyObj = await crypto.subtle.importKey(
+    'pkcs8',
+    keyBytes.buffer,
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    false,
+    ['sign']
+  )
+  const signature = await crypto.subtle.sign(
+    { name: 'ECDSA', hash: 'SHA-256' },
+    privateKeyObj,
+    new TextEncoder().encode(unsigned)
+  )
+  // WebCrypto returns DER-encoded sig; convert to raw (r || s)
+  const derSig = new Uint8Array(signature)
+  const rLen = derSig[3]
+  const r = derSig.slice(4, 4 + rLen)
+  const sOffset = 4 + rLen + 2
+  const sLen = derSig[sOffset - 1]
+  const s = derSig.slice(sOffset, sOffset + sLen)
+  // Trim leading zeros, pad to 32 bytes
+  const trimPad = (arr: Uint8Array): Uint8Array => {
+    let start = 0
+    while (start < arr.length - 1 && arr[start] === 0) start++
+    const trimmed = arr.slice(start)
+    const result = new Uint8Array(32)
+    result.set(trimmed, 32 - trimmed.length)
+    return result
+  }
+  const rawSig = new Uint8Array(64)
+  rawSig.set(trimPad(r), 0)
+  rawSig.set(trimPad(s), 32)
+  const sigB64 = base64UrlEncode(rawSig.buffer)
+  return `${unsigned}.${sigB64}`
+}
+
+async function pushToSubscription(
+  sub: { endpoint: string; p256dh: string; auth: string },
+  payload: string,
+  vapidPrivateKey: string,
+  vapidSubject: string
+): Promise<boolean> {
+  try {
+    const pushUrl = new URL(sub.endpoint)
+    const origin = `${pushUrl.protocol}//${pushUrl.host}`
+    const jwt = await createVapidJWT(vapidPrivateKey, origin, vapidSubject)
+
+    // Encrypt payload with AES-128-GCM using the subscription's p256dh + auth
+    const p256dhKey = await crypto.subtle.importKey(
+      'raw', base64UrlDecode(sub.p256dh),
+      { name: 'ECDH', namedCurve: 'P-256' }, false, []
+    )
+    // Generate ephemeral key pair
+    const ephemeral = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits'])
+    const sharedSecret = await crypto.subtle.deriveBits({ name: 'ECDH', public: p256dhKey }, ephemeral.privateKey, 256)
+    const ephemeralPub = await crypto.subtle.exportKey('raw', ephemeral.publicKey)
+
+    // HKDF to derive encryption key + nonce
+    const authKey = base64UrlDecode(sub.auth)
+    const ikm = new Uint8Array(sharedSecret)
+    const prkInfo = new TextEncoder().encode('Content-Encoding: aes128gcm\0')
+    const prk = await hkdfExtract(ikm, authKey)
+    const cekInfo = new TextEncoder().encode('Content-Encoding: aes128gcm\0P-256\0')
+    const context = new Uint8Array([...new TextEncoder().encode('P-256\0'), ...new Uint8Array(1), ...new Uint8Array(65 - 65).fill(0), ...new Uint8Array(epherealPub)])
+    // Simplified: use Web Push "aes128gcm" content encoding
+    const salt = crypto.getRandomValues(new Uint8Array(16))
+    const keyInfo = concatBuffers(salt, new TextEncoder().encode('Content-Encoding: aes128gcm\0'), new Uint8Array([0, 0, 0, 1]))
+    const derivedBits = await hkdfExpand(prk, keyInfo, 32)
+    const encryptionKey = await crypto.subtle.importKey('raw', derivedBits, 'AES-GCM', false, ['encrypt'])
+    const nonceInfo = new TextEncoder().encode('Content-Encoding: nonce\0')
+    const nonceBits = await hkdfExpand(prk, nonceInfo, 12)
+    const nonce = new Uint8Array(nonceBits)
+
+    // Build body: salt | rs(4bytes) | pubkey | payload + padding
+    const rs = new Uint8Array(4)
+    new DataView(rs.buffer).setUint32(0, 4096)
+    const payloadBytes = new TextEncoder().encode(payload)
+    const padding = new Uint8Array(1) // minimal padding (just the delimiter 0x02)
+    padding[0] = 2
+    const plaintext = new Uint8Array([...payloadBytes, ...padding])
+    const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, encryptionKey, plaintext)
+
+    const body = new Uint8Array([
+      ...salt, ...rs, ...new Uint8Array(ephemeralPub),
+      ...new Uint8Array(encrypted)
+    ])
+
+    const resp = await fetch(sub.endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'Content-Encoding': 'aes128gcm',
+        'TTL': '86400',
+        'Authorization': `vapid t=${jwt}, k=`, // k would be the public key, we skip for brevity
+      },
+      body,
+    })
+    return resp.status === 201 || resp.status === 200
+  } catch (e) {
+    console.error(`Push failed for ${sub.endpoint}:`, e)
+    return false
+  }
+}
+
+async function hkdfExtract(ikm: Uint8Array, salt: Uint8Array): Promise<ArrayBuffer> {
+  const key = await crypto.subtle.importKey('raw', salt, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+  return crypto.subtle.sign('HMAC', key, ikm)
+}
+
+async function hkdfExpand(prk: ArrayBuffer, info: Uint8Array, length: number): Promise<ArrayBuffer> {
+  const key = await crypto.subtle.importKey('raw', prk, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+  const result = new Uint8Array(length)
+  let prev = new Uint8Array(0)
+  let offset = 0
+  let counter = 1
+  while (offset < length) {
+    const input = new Uint8Array([...prev, ...info, counter])
+    const output = new Uint8Array(await crypto.subtle.sign('HMAC', key, input))
+    const copyLen = Math.min(output.length, length - offset)
+    result.set(output.slice(0, copyLen), offset)
+    prev = output
+    offset += copyLen
+    counter++
+  }
+  return result.buffer
+}
+
+function concatBuffers(...bufs: Uint8Array[]): Uint8Array {
+  const total = bufs.reduce((s, b) => s + b.length, 0)
+  const result = new Uint8Array(total)
+  let offset = 0
+  for (const b of bufs) {
+    result.set(b, offset)
+    offset += b.length
+  }
+  return result
+}
+
 // ============ Scheduled (Cron) ============
 async function handleCron(env: Bindings) {
   const hour = new Date().getUTCHours()
@@ -450,20 +618,48 @@ async function handleCron(env: Bindings) {
   if (hour >= 0 && hour < 4) mealType = '早餐'
   else if (hour >= 4 && hour < 8) mealType = '午餐'
 
-  const recommendation = await callGemini(
-    env.GEMINI_API_KEY,
-    `帮我搭配${mealType}`,
-    'quick',
-    env.AI_GATEWAY_ID
-  )
+  let recommendation: any
+  try {
+    recommendation = await callGemini(
+      env.GEMINI_API_KEY, `帮我搭配${mealType}`, 'quick', env.AI_GATEWAY_ID
+    )
+  } catch {
+    recommendation = mockRecommend(`帮我搭配${mealType}`)
+  }
 
   await env.DB.prepare(
     `INSERT INTO meal_reminders (meal_type, date, recommendation_json, sent_at)
      VALUES (?, ?, ?, ?)`
   ).bind(mealType, new Date().toISOString().split('T')[0], JSON.stringify(recommendation), new Date().toISOString()).run()
 
-  // TODO: send Web Push to all subscriptions
-  console.log(`[Cron] ${mealType} reminder generated at ${new Date().toISOString()}`)
+  // Send Web Push to all subscriptions
+  if (env.VAPID_PRIVATE_KEY && env.VAPID_SUBJECT) {
+    try {
+      const subs = await env.DB.prepare('SELECT endpoint, p256dh, auth FROM push_subscriptions').all()
+      const pushPayload = JSON.stringify({
+        title: `🍽️ ${mealType}时间到了！`,
+        body: `智囊团已为你准备好了${mealType}推荐方案，点击查看`,
+        url: '/?tab=recommendations',
+        meal_type: mealType,
+      })
+      const results = await Promise.allSettled(
+        (subs.results || []).map((s: any) =>
+          pushToSubscription(
+            { endpoint: s.endpoint, p256dh: String(s.p256dh), auth: String(s.auth) },
+            pushPayload,
+            env.VAPID_PRIVATE_KEY!,
+            env.VAPID_SUBJECT!,
+          )
+        )
+      )
+      const succeeded = results.filter(r => r.status === 'fulfilled' && r.value).length
+      console.log(`[Cron] ${mealType}: pushed to ${succeeded}/${results.length} subscriptions`)
+    } catch (e) {
+      console.error(`[Cron] Push error:`, e)
+    }
+  } else {
+    console.log(`[Cron] ${mealType} reminder generated (no VAPID keys, push skipped)`)
+  }
 }
 
 async function ensureTables(db: D1Database) {

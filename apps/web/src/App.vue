@@ -20,6 +20,7 @@ import LearningPanel from '@/components/LearningPanel.vue'
 import MetricsPanel from '@/components/MetricsPanel.vue'
 import ProfileCard from '@/components/ProfileCard.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
+import ReminderBell from '@/components/ReminderBell.vue'
 
 const store = useAppStore()
 
@@ -53,6 +54,7 @@ function handleFeedbackSubmit(satisfaction: number, notes: string) {
           </span>
         </div>
         <div class="flex items-center gap-2">
+          <ReminderBell />
           <ProviderBadge />
           <ResetButtons @reset-conversation="store.handleResetConversation" @reset-profile="store.handleResetProfile" />
         </div>
