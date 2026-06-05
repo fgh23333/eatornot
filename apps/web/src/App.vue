@@ -19,6 +19,7 @@ import BalanceMode from '@/components/BalanceMode.vue'
 import LearningPanel from '@/components/LearningPanel.vue'
 import MetricsPanel from '@/components/MetricsPanel.vue'
 import ProfileCard from '@/components/ProfileCard.vue'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const store = useAppStore()
 
@@ -78,7 +79,7 @@ function handleFeedbackSubmit(satisfaction: number, notes: string) {
           </TabsContent>
 
           <TabsContent value="mode" class="flex-1 min-h-0 overflow-y-auto scrollbar-hidden mt-3 space-y-3 pr-1">
-            <BalanceMode :user-id="store.profile.value.user_id" mood="normal" />
+            <BalanceMode :user-id="store.profile.value.user_id" :mood="store.quickProfile.value?.mood || 'normal'" />
             <ProfileCard :profile="store.profile.value" />
           </TabsContent>
 
@@ -107,19 +108,36 @@ function handleFeedbackSubmit(satisfaction: number, notes: string) {
         </div>
 
         <!-- Input -->
-        <div v-if="!store.recommendation.value" class="space-y-2">
+        <div v-if="!store.recommendation.value && !store.loading.value" class="space-y-2">
           <p v-if="store.mode.value === 'quick'" class="text-sm text-muted-foreground">
             基于：{{ store.quickProfile.value?.meal_goal }} · 预算 ¥{{ store.quickProfile.value?.budget_limit }}
           </p>
           <div class="flex gap-2">
             <textarea v-model="store.inputValue.value" :rows="store.mode.value === 'long_term' ? 3 : 2"
               class="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm resize-none"
-              :placeholder="store.mode.value === 'long_term' ? '告诉我你想吃什么...' : '有什么特别想吃的？'" />
-            <Button :disabled="store.loading.value || !store.inputValue.value.trim()"
+              :placeholder="store.mode.value === 'long_term' ? '告诉我你想吃什么...' : '有什么特别想吃的？'"
+              @keydown.ctrl.enter="store.handleRecommend()" />
+            <Button :disabled="!store.inputValue.value.trim()"
               @click="store.handleRecommend()">
-              {{ store.loading.value ? '分析中...' : '🔍 分析' }}
+              🔍 分析
             </Button>
           </div>
+          <!-- Quick prompts -->
+          <div class="flex flex-wrap gap-1.5">
+            <button v-for="q in ['想吃汉堡', '帮我搭配午餐', '减脂推荐', '今天想吃点好的', '便宜点的']" :key="q"
+              @click="store.inputValue.value = q; store.handleRecommend()"
+              class="px-2.5 py-1 rounded-full text-xs border border-gray-200 text-gray-500 hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50 transition-all">
+              {{ q }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading skeleton -->
+        <div v-if="store.loading.value">
+          <div class="p-3 rounded-lg bg-orange-50 max-w-2xl ml-auto text-sm mb-3">
+            {{ store.chatMessages.value[store.chatMessages.value.length - 1]?.content }}
+          </div>
+          <SkeletonLoader />
         </div>
 
         <!-- Recommendation Results -->
@@ -127,6 +145,15 @@ function handleFeedbackSubmit(satisfaction: number, notes: string) {
           <p class="text-sm text-gray-600">{{ store.recommendation.value.summary }}</p>
           <div v-if="store.recommendation.value.safety_warnings.length" class="flex flex-wrap gap-2">
             <span v-for="w in store.recommendation.value.safety_warnings" :key="w" class="text-xs px-2 py-1 rounded bg-yellow-50 text-yellow-700">⚠️ {{ w }}</span>
+          </div>
+
+          <!-- Quick refine prompts after results -->
+          <div class="flex flex-wrap gap-1.5">
+            <button v-for="q in ['换一批推荐', '更便宜点', '更健康点', '想吃点好的']" :key="q"
+              @click="store.inputValue.value = q; store.handleRecommend()"
+              class="px-2.5 py-1 rounded-full text-xs border border-orange-200 text-orange-600 hover:bg-orange-50 transition-all">
+              {{ q }}
+            </button>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <RecommendationCard v-for="plan in store.recommendation.value.plans" :key="plan.id"

@@ -1,5 +1,17 @@
 const BASE = ''
 
+// 动态获取当前用户 ID（从 localStorage 恢复或使用 demo-user）
+function getUserId(): string {
+  try {
+    const saved = localStorage.getItem('eatornot_profile')
+    if (saved) {
+      const profile = JSON.parse(saved)
+      if (profile?.user_id) return profile.user_id
+    }
+  } catch {}
+  return 'demo-user'
+}
+
 export interface UserProfile {
   user_id: string
   name: string
@@ -138,7 +150,7 @@ export interface TodayStatus {
 
 // ============ API 函数 ============
 
-export async function fetchProfile(userId: string = 'demo-user'): Promise<UserProfile> {
+export async function fetchProfile(userId: string = getUserId()): Promise<UserProfile> {
   const res = await fetch(`${BASE}/api/profile?user_id=${userId}`)
   return res.json()
 }
@@ -152,7 +164,7 @@ export async function saveProfile(profile: UserProfile): Promise<UserProfile> {
   return res.json()
 }
 
-export async function resetProfile(userId: string = 'demo-user'): Promise<{ success: boolean }> {
+export async function resetProfile(userId: string = getUserId()): Promise<{ success: boolean }> {
   const res = await fetch(`${BASE}/api/profile/reset`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -174,7 +186,7 @@ export async function fetchRecommendation(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      user_id: 'demo-user',
+      user_id: getUserId(),
       message,
       mode,
       quick_profile: quickProfile,
@@ -198,7 +210,7 @@ export async function confirmOrder(plan: RecommendationPlan): Promise<{ order_id
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      user_id: 'demo-user',
+      user_id: getUserId(),
       plan_id: plan.id,
       items: plan.items,
       estimated_price: plan.estimated_price,
@@ -208,7 +220,7 @@ export async function confirmOrder(plan: RecommendationPlan): Promise<{ order_id
   return res.json()
 }
 
-export async function resetConversation(userId: string = 'demo-user'): Promise<{ success: boolean }> {
+export async function resetConversation(userId: string = getUserId()): Promise<{ success: boolean }> {
   const res = await fetch(`${BASE}/api/conversation/reset`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -231,12 +243,12 @@ export async function submitFeedback(feedback: { meal_id: string; satisfaction: 
   return res.json()
 }
 
-export async function fetchDashboard(userId: string = 'demo-user'): Promise<any> {
+export async function fetchDashboard(userId: string = getUserId()): Promise<any> {
   const res = await fetch(`${BASE}/api/dashboard?user_id=${userId}`)
   return res.json()
 }
 
-export async function fetchReminders(userId: string = 'demo-user'): Promise<any> {
+export async function fetchReminders(userId: string = getUserId()): Promise<any> {
   const res = await fetch(`${BASE}/api/reminders?user_id=${userId}`)
   return res.json()
 }
@@ -284,12 +296,12 @@ export async function getProviderStatus(): Promise<any> {
   return res.json()
 }
 
-export async function getLearningPoints(userId: string = 'demo-user'): Promise<any> {
+export async function getLearningPoints(userId: string = getUserId()): Promise<any> {
   const res = await fetch(`${BASE}/api/demo/learning?user_id=${userId}`)
   return res.json()
 }
 
-export async function getDemoMetrics(userId: string = 'demo-user'): Promise<any> {
+export async function getDemoMetrics(userId: string = getUserId()): Promise<any> {
   const res = await fetch(`${BASE}/api/demo/metrics?user_id=${userId}`)
   return res.json()
 }
@@ -309,7 +321,7 @@ export async function createOrder(plan: RecommendationPlan, storeCode: string = 
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      user_id: 'demo-user',
+      user_id: getUserId(),
       plan_id: plan.id,
       items: plan.items.map(item => ({
         product_code: item.item_code,
