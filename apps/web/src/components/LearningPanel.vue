@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle, Badge } from '@/components/ui'
-import { getLearningPoints } from '@/api/client'
+import { getLearningPoints, getUserId } from '@/api/client'
 
 const props = defineProps<{ userId?: string }>()
 
@@ -9,7 +9,7 @@ const data = ref<any>(null)
 
 async function load() {
   try {
-    data.value = await getLearningPoints(props.userId || 'demo-user')
+    data.value = await getLearningPoints(props.userId || getUserId())
   } catch {}
 }
 

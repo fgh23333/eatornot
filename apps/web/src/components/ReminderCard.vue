@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { Card, CardContent, Button } from '@/components/ui'
 import { useNotifications } from '@/composables/useNotifications'
-import { fetchReminders, acceptReminder, snoozeReminder, dismissReminder } from '@/api/client'
+import { fetchReminders, acceptReminder, snoozeReminder, dismissReminder, getUserId } from '@/api/client'
 
 const props = defineProps<{ userId?: string }>()
 const emit = defineEmits<{ 'accept': [reminder: any] }>()
@@ -14,7 +14,7 @@ const notifiedIds = ref(new Set<string>())
 
 async function loadReminders() {
   try {
-    const data = await fetchReminders(props.userId || 'demo-user')
+    const data = await fetchReminders(props.userId || getUserId())
     const filtered = (data.reminders || []).filter((r: any) => !dismissedIds.value.has(r.reminder_id))
     reminders.value = filtered
     if (supported.value) {

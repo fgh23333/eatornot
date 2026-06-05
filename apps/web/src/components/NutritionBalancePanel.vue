@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle, Progress } from '@/components/ui'
+import { getUserId } from '@/api/client'
 
 const props = defineProps<{ userId?: string }>()
 
@@ -8,7 +9,7 @@ const balance = ref<any>(null)
 
 async function fetchBalance() {
   try {
-    const res = await fetch(`/api/balance/overview?user_id=${props.userId || 'demo-user'}`)
+    const res = await fetch(`/api/balance/overview?user_id=${props.userId || getUserId()}`)
     balance.value = await res.json()
   } catch {}
 }

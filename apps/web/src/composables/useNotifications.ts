@@ -1,4 +1,5 @@
 import { ref, readonly } from 'vue'
+import { getUserId } from '@/api/client'
 
 const API_BASE = import.meta.env.DEV ? 'http://localhost:8001' : ''
 
@@ -82,7 +83,7 @@ export function useNotifications() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id: 'demo-user',
+          user_id: getUserId(),
           subscription: subscription.toJSON(),
         }),
       })

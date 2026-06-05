@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle, Progress, Badge, Button } from '@/components/ui'
-import { fetchDashboard } from '@/api/client'
+import { fetchDashboard, getUserId } from '@/api/client'
 
 const props = defineProps<{ userId?: string }>()
 const emit = defineEmits<{ 'request-recommend': [mealType: string] }>()
@@ -10,7 +10,7 @@ const dashboard = ref<any>(null)
 
 async function loadDashboard() {
   try {
-    dashboard.value = await fetchDashboard(props.userId || 'demo-user')
+    dashboard.value = await fetchDashboard(props.userId || getUserId())
   } catch {}
 }
 

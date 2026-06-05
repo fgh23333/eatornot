@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     APP_NAME: str = "EatOrNot"
     DEBUG: bool = True
 
+    # CORS
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:5178,http://localhost:*"
+
     model_config = {"env_file": str(ENV_FILE), "env_file_encoding": "utf-8"}
 
 

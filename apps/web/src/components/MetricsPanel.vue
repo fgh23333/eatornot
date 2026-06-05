@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
-import { getDemoMetrics } from '@/api/client'
+import { getDemoMetrics, getUserId } from '@/api/client'
 
 const props = defineProps<{ userId?: string }>()
 
@@ -9,7 +9,7 @@ const data = ref<any>(null)
 
 async function load() {
   try {
-    data.value = await getDemoMetrics(props.userId || 'demo-user')
+    data.value = await getDemoMetrics(props.userId || getUserId())
   } catch {}
 }
 

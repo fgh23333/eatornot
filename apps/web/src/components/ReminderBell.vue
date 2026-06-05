@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useNotifications } from '@/composables/useNotifications'
 import { Button } from '@/components/ui'
+import { getUserId } from '@/api/client'
 import TerminalSkillBanner from '@/components/TerminalSkillBanner.vue'
 
 const { pushEnabled, pushSupported, enablePush, disablePush, initPush, notify } = useNotifications()
@@ -26,7 +27,7 @@ async function togglePush() {
 
 async function fetchReminders() {
   try {
-    const resp = await fetch(`${API_BASE}/api/reminders?user_id=demo-user`)
+    const resp = await fetch(`${API_BASE}/api/reminders?user_id=${getUserId()}`)
     if (!resp.ok) return
     const data = await resp.json()
     reminders.value = data.reminders || []
@@ -41,7 +42,7 @@ async function acknowledgeReminder(id: number) {
     await fetch(`${API_BASE}/api/reminders/${id}/ack`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: 'demo-user' }),
+      body: JSON.stringify({ user_id: getUserId() }),
     })
   } catch { /* ignore */ }
   reminders.value = reminders.value.filter((r: any) => r.id !== id)

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle, Button } from '@/components/ui'
+import { getUserId } from '@/api/client'
 
 const props = defineProps<{ userId?: string }>()
 const emit = defineEmits<{ 'confirm': [draft: any] }>()
@@ -9,7 +10,7 @@ const draft = ref<any>(null)
 
 async function fetchDraft() {
   try {
-    const res = await fetch(`/api/draft/auto?user_id=${props.userId || 'demo-user'}`)
+    const res = await fetch(`/api/draft/auto?user_id=${props.userId || getUserId()}`)
     draft.value = await res.json()
   } catch {}
 }
