@@ -95,18 +95,19 @@ async def get_recommendation(body: dict):
     }
 
     # 记录对话
-    conversation_service.add_message(user.user_id, "user", message)
+    await conversation_service.add_message(user.user_id, "user", message)
 
     # Run SupervisorAgent
     supervisor = SupervisorAgent()
     result = await supervisor.run(context)
 
     # 记录助手回复
-    conversation_service.add_message(user.user_id, "assistant", result.summary)
+    await conversation_service.add_message(user.user_id, "assistant", result.summary)
 
     # 为每个方案创建 ActivePlan
     for plan in result.plans:
-        active_plan = active_plan_service.create_plan(
+        active_plan = await active_plan_service.create_plan(
+            user_id=user.user_id,
             title=plan.title,
             mode=plan.mode,
             items=plan.items,

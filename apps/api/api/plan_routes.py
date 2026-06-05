@@ -208,7 +208,7 @@ async def refine_plan(body: dict):
     message = body.get("message", "")
     constraints = body.get("constraints", [])
 
-    plan = active_plan_service.get_plan(plan_id)
+    plan = await active_plan_service.get_plan(plan_id)
     if not plan:
         return {"error": "方案不存在"}
 
@@ -224,7 +224,7 @@ async def refine_plan(body: dict):
     why = f"用户要求：{message}"
 
     # 精炼方案
-    refined = active_plan_service.refine_plan(
+    refined = await active_plan_service.refine_plan(
         plan_id=plan_id,
         new_items=new_items,
         what_changed=what_changed,
@@ -241,8 +241,8 @@ async def refine_plan(body: dict):
     if change_log:
         assistant_reply += f"。{change_log.impact}"
 
-    conversation_service.add_message("demo-user", "user", message)
-    conversation_service.add_message("demo-user", "assistant", assistant_reply)
+    await conversation_service.add_message("demo-user", "user", message)
+    await conversation_service.add_message("demo-user", "assistant", assistant_reply)
 
     return refined
 
@@ -250,7 +250,7 @@ async def refine_plan(body: dict):
 @router.get("/plan/{plan_id}", response_model=ActivePlan)
 async def get_plan(plan_id: str):
     """获取当前方案"""
-    plan = active_plan_service.get_plan(plan_id)
+    plan = await active_plan_service.get_plan(plan_id)
     if not plan:
         return {"error": "方案不存在"}
     return plan
@@ -260,14 +260,14 @@ async def get_plan(plan_id: str):
 async def reset_plan(body: dict):
     """重置指定方案"""
     plan_id = body.get("plan_id", "")
-    success = active_plan_service.reset_plan(plan_id)
+    success = await active_plan_service.reset_plan(plan_id)
     return {"success": success, "message": "方案已重置" if success else "方案不存在"}
 
 
 @router.get("/conversation/history")
 async def get_conversation_history(user_id: str = "demo-user", limit: int = 50):
     """获取对话历史"""
-    messages = conversation_service.get_history(user_id, limit)
+    messages = await conversation_service.get_history(user_id, limit)
     return {
         "user_id": user_id,
         "messages": [
@@ -281,7 +281,7 @@ async def get_conversation_history(user_id: str = "demo-user", limit: int = 50):
 async def reset_conversation(body: dict):
     """重置对话历史"""
     user_id = body.get("user_id", "demo-user")
-    success = conversation_service.reset_conversation(user_id)
+    success = await conversation_service.reset_conversation(user_id)
     # 同时重置所有方案
     active_plan_service.reset_all()
     return {"success": success, "message": "对话已重置"}
