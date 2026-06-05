@@ -6,10 +6,10 @@ WORKDIR /app
 RUN npm install -g pnpm
 
 # Copy package files
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml* ./
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile || pnpm install
 
 # Copy source code
 COPY . .
@@ -23,11 +23,28 @@ RUN pnpm build
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# SPA routing support
+# SPA routing + API reverse proxy to backend
 RUN echo 'server { \
     listen 80; \
     root /usr/share/nginx/html; \
     index index.html; \
+    \
+    # API reverse proxy to FastAPI backend \
+    location /api/ { \
+        proxy_pass http://api:8001/api/; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+        proxy_set_header X-Forwarded-Proto $scheme; \
+        proxy_read_timeout 60s; \
+    } \
+    \
+    # Health check proxy \
+    location /health { \
+        proxy_pass http://api:8001/health; \
+    } \
+    \
+    # SPA fallback \
     location / { \
         try_files $uri $uri/ /index.html; \
     } \

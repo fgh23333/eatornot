@@ -34,7 +34,8 @@ EatOrNot 不是简单的菜单推荐工具。它通过**多 Agent 圆桌辩论**
 - 🔄 **多轮精炼** — 方案可逐轮调整，ActivePlan 支持版本追踪
 - 🎨 **双模式入口** — 长期管理（完整档案）+ 快速选择（极简档案）
 - 🧠 **习惯记忆** — 记录饮食偏好与历史，持续优化推荐
-- ⏰ **饭点提醒** — 基于时间的主动提醒和营养缺口检测
+- ⏰ **饭点提醒** — 服务端 Cron + Web Push 浏览器推送 + 前端轮询
+- 🔔 **终端集成** — Claude Code skill，终端内一键点餐/推荐/领券
 - 📊 **今日仪表盘** — 实时营养摄入、预算消耗、饮食平衡可视化
 - 🔗 **麦当劳 MCP** — 接入真实麦当劳菜单和价格数据，自动生成订单草稿
 
@@ -45,7 +46,7 @@ EatOrNot 不是简单的菜单推荐工具。它通过**多 Agent 圆桌辩论**
 | 层 | 技术 |
 |----|------|
 | **后端** | Python 3.12 + FastAPI |
-| **前端** | React 19 + Vite 6 + TypeScript |
+| **前端** | Vue 3 + Vite 6 + TypeScript |
 | **LLM** | Cloudflare AI Gateway → Google Gemma 4 |
 | **数据库** | SQLAlchemy + aiosqlite (SQLite) |
 | **Agent 框架** | Google ADK (Agent Development Kit) |
@@ -55,19 +56,58 @@ EatOrNot 不是简单的菜单推荐工具。它通过**多 Agent 圆桌辩论**
 
 ## 快速开始
 
-### 1. 安装依赖
+### 方式 A：Docker 一键启动（推荐）
+
+```bash
+# 1. 配置环境变量
+cp .env.example .env
+# 编辑 .env，填入 CF_AIG_TOKEN（必填）
+
+# 2. 一键启动
+docker compose up -d --build
+
+# 3. 访问
+# 前端: http://localhost:5173
+# 后端: http://localhost:8001/health
+```
+
+nginx 自动代理 `/api` → FastAPI 后端，无需跨域配置。
+
+### 方式 B：本地开发
 
 ```bash
 # 后端
 cd apps/api
 pip install -r requirements.txt
+uvicorn main:app --host 127.0.0.1 --port 8001
 
-# 前端
+# 前端 (另一个终端)
 cd apps/web
-npm install
+pnpm install
+pnpm dev
 ```
 
-### 2. 配置环境变量
+访问 http://localhost:5173
+
+### 方式 C：Cloudflare 部署（线上）
+
+- **前端**: Cloudflare Pages → 自动构建，绑定 `eatornot-7tp.pages.dev`
+- **后端**: Cloudflare Workers + D1 → `eatornot-api.jimmy120070.workers.dev`
+- **LLM**: Cloudflare AI Gateway → Gemma 4
+
+### 终端点餐（Claude Code）
+
+```powershell
+# 一键安装 skill + 权限
+.\scripts\claude-setup\install.ps1
+
+# 重启 Claude Code，然后说：
+帮我点午餐     # AI 推荐 + 查门店 + 下单
+领券           # 自动领取麦当劳优惠券
+有什么活动     # 查询当月活动日历
+```
+
+### 配置环境变量
 
 ```bash
 cp .env.example .env
@@ -81,21 +121,7 @@ cp .env.example .env
 | `CF_AIG_BASE_URL` | ✅ | AI Gateway 兼容端点 URL |
 | `GEMMA_MODEL` | ✅ | Gemma 模型 ID（如 `google-ai-studio/gemma-4-31b-it`） |
 | `MCD_MCP_TOKEN` | ❌ | 麦当劳 MCP Token（无则用 Mock 数据） |
-| `DATABASE_URL` | ❌ | SQLite 路径（默认 `./eatornot.db`） |
-
-### 3. 启动
-
-```bash
-# 后端 (port 8001)
-cd apps/api
-uvicorn main:app --host 127.0.0.1 --port 8001
-
-# 前端 (port 5173)
-cd apps/web
-npm run dev
-```
-
-访问 http://localhost:5173
+| `DATABASE_URL` | ❌ | SQLite 路径（默认 `./data/eatornot.db`） |
 
 ---
 
@@ -121,17 +147,25 @@ eatornot/
 │   │   ├── providers/                # 食物数据源抽象层
 │   │   ├── adk_app/                  # Google ADK 集成
 │   │   └── data/                     # Mock 数据
-│   └── web/                          # React 前端
+│   └── web/                          # Vue 3 前端
 │       └── src/
-│           ├── App.tsx               # 主应用
+│           ├── App.vue               # 主应用
 │           ├── api/client.ts         # API 客户端
-│           └── components/           # 22 个组件
+│           ├── composables/          # Push 通知 + 全局状态
+│           └── components/           # 25+ 组件
+├── apps/worker/                      # Cloudflare Worker (Hono.js)
+│   ├── src/index.ts                  # Worker 入口 + Cron + Push
+│   └── wrangler.toml                 # D1 + Cron Trigger 配置
 ├── knowledge/                        # 营养学知识库
 │   ├── nutrition.json                # 核心营养数据
 │   ├── nutrition_guidelines/         # 膳食指南
 │   ├── safety/                       # 安全规则
 │   └── weight_loss/                  # 减重规则
 ├── skills/                           # ADK Skills (5 个)
+├── scripts/claude-setup/             # 终端点餐安装脚本
+│   ├── skills/meal-order.md          # Claude Code skill
+│   ├── install.ps1                   # 一键安装
+│   └── README.md                     # 使用文档
 ├── docs/                             # 文档
 ├── CLAUDE.md                         # 开发指南 + 协作规范
 └── TODO.md                           # 待办事项
@@ -157,31 +191,37 @@ eatornot/
 ## 架构概览
 
 ```
-┌─────────────────────────────────────────────┐
-│            React Frontend (5173)             │
-│  ModeSelection → Profile → Debate → Plan    │
-└────────────────────┬────────────────────────┘
-                     │ HTTP/JSON
-┌────────────────────▼────────────────────────┐
-│            FastAPI Backend (8001)            │
-│                                             │
-│  Routes → MealDecisionFlow / RecommendFlow  │
-│              │                              │
-│     OrchestratorAgent (选 3-5 个 Agent)      │
-│              │                              │
-│     8 个 Agent 并行分析 → DebateEngine       │
-│              │                              │
-│     SupervisorAgent → 3 个推荐方案           │
-│              │                              │
-│     AutoDraftService → 订单草稿              │
-│     MemoryService → 习惯记忆                 │
-│     DashboardService → 今日仪表盘            │
-└────────────────────┬────────────────────────┘
-                     │
-┌────────────────────▼────────────────────────┐
-│           Providers (食物数据源)             │
-│  McDonaldsMCP / MockMcDonalds / Manual      │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│                  用户入口 (3 种方式)                   │
+│  🌐 浏览器 (Pages)  │  💻 终端 (Claude Code)  │  🐳 Docker │
+└──────────┬──────────┴────────────┬──────────┴──────┬──────┘
+           │                       │                  │
+           ▼                       ▼                  ▼
+┌──────────────────┐    ┌──────────────────┐   ┌────────────┐
+│  Cloudflare Pages │    │  Claude Code      │   │  Docker    │
+│  Vue 3 + nginx    │    │  + meal-order     │   │  Compose   │
+│  Service Worker   │    │    skill          │   │  web+api   │
+└────────┬─────────┘    └────────┬──────────┘   └─────┬──────┘
+         │                       │                     │
+         ▼                       ▼                     ▼
+┌──────────────────────────────────────────────────────────────┐
+│                    API 后端 (2 种部署)                        │
+│         Cloudflare Workers (Hono.js)  │  FastAPI (本地/Docker) │
+│         ├─ D1 Database               │  ├─ SQLite             │
+│         ├─ Cron Triggers (3 餐次)     │  ├─ Google ADK Agents  │
+│         ├─ Web Push (VAPID)           │  └─ McDonalds MCP      │
+│         └─ AI Gateway → Gemma 4      │                        │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 决策流程
+
+```
+用户输入 → MealDecisionFlow → SupervisorAgent
+  ├─ OrchestratorAgent (LLM 智能调度 → 选 3-5 个 Agent)
+  │   └─ asyncio.gather() → 8 个 Agent 并行分析
+  ├─ DebateEngine (4 阶段圆桌辩论)
+  └─ SupervisorAgent → 3 个方案: 💪自律 / 💰省钱 / 🍔犒劳
 ```
 
 ---
