@@ -20,37 +20,12 @@ function dismiss() {
   localStorage.setItem('terminal-skill-dismissed', 'true')
 }
 
-const skillContent = `---
-name: meal-order
-description: Terminal meal ordering. Say "帮我点餐" or "午餐推荐".
----
+// One-line install prompt for Claude Code
+const installPrompt = `请帮我安装 EatOrNot 终端点餐 Skill：创建 .claude/skills/meal-order.md，内容从 https://raw.githubusercontent.com/fgh23333/eatornot/main/scripts/claude-setup/skills/meal-order.md 获取，然后更新 .claude/settings.local.json 合并 https://raw.githubusercontent.com/fgh23333/eatornot/main/scripts/claude-setup/settings.local.json.template 的权限。完成后说"帮我点午餐"测试。`
 
-# 🍔 EatOrNot 终端点餐
-
-## 触发词
-"帮我点餐" / "午餐推荐" / "吃什么" / "领券" / "有什么活动"
-
-## 流程
-1. curl POST https://eatornot-api.jimmy120070.workers.dev/api/recommend 获取 3 个 AI 方案
-2. 用 Markdown 表格展示方案
-3. 用户选择后，使用 mcp__mcd-mcp__query-nearby-stores 查门店
-4. 使用 mcp__mcd-mcp__query-meals 匹配菜品
-5. 使用 mcp__mcd-mcp__calculate-price 算价
-6. 用户确认后使用 mcp__mcd-mcp__create-order 下单
-
-## 安全规则
-- 下单前必须用户确认
-- cron 提醒只展示推荐，不自动下单`
-
-const steps = [
-  { label: '1', text: '打开终端，进入项目目录', cmd: 'git clone https://github.com/fgh23333/eatornot.git && cd eatornot' },
-  { label: '2', text: '运行安装脚本', cmd: 'powershell scripts/claude-setup/install.ps1', note: 'Mac/Linux: bash scripts/claude-setup/install.sh' },
-  { label: '3', text: '重启 Claude Code，说 "帮我点午餐" 即可' },
-]
-
-function copyStep(idx: number, text: string) {
-  navigator.clipboard.writeText(text)
-  copiedStep.value = idx
+function copyPrompt() {
+  navigator.clipboard.writeText(installPrompt)
+  copiedStep.value = 0
   setTimeout(() => { copiedStep.value = -1 }, 2000)
 }
 </script>
@@ -62,9 +37,7 @@ function copyStep(idx: number, text: string) {
       <span class="text-base flex-shrink-0">💻</span>
       <div class="flex-1 min-w-0">
         <p class="text-xs font-semibold text-indigo-900">终端也能点餐</p>
-        <p class="text-[10px] text-indigo-600 mt-0.5">安装 Claude Code Skill → 说 "帮我点午餐" 即可</p>
-        <a href="https://github.com/fgh23333/eatornot#-终端点餐claude-code"
-          target="_blank" class="text-[10px] text-indigo-500 underline mt-1 inline-block">查看安装教程 →</a>
+        <p class="text-[10px] text-indigo-600 mt-0.5">在 Claude Code 粘贴一句命令即可安装 Skill</p>
       </div>
     </div>
   </div>
@@ -84,47 +57,35 @@ function copyStep(idx: number, text: string) {
         <div class="flex-1">
           <h4 class="font-semibold text-indigo-900 text-sm">终端也能点餐！</h4>
           <p class="text-xs text-indigo-600 mt-1">
-            在 Claude Code / Cursor 终端里说 <strong>"帮我点午餐"</strong> 即可获得 AI 推荐 + 一键下单
+            在 <strong>Claude Code</strong> 或 <strong>Cursor</strong> 终端里，粘贴下方命令即可安装 Skill，然后说 <strong>"帮我点午餐"</strong> 即可获得 AI 推荐 + 一键下单
           </p>
 
-          <!-- Toggle steps -->
-          <button @click="showSteps = !showSteps"
-            class="mt-2 text-xs text-indigo-500 hover:text-indigo-700 underline transition-colors">
-            {{ showSteps ? '收起安装步骤' : '📋 查看安装步骤' }}
-          </button>
-
-          <!-- Installation steps -->
-          <div v-if="showSteps" class="mt-3 space-y-2.5">
-            <div v-for="(step, idx) in steps" :key="idx"
-              class="bg-white/60 rounded-lg p-2.5 border border-indigo-100">
-              <div class="flex items-center gap-2">
-                <span class="w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">
-                  {{ step.label }}
-                </span>
-                <span class="text-xs text-indigo-900">{{ step.text }}</span>
-              </div>
-              <div v-if="step.cmd" class="mt-1.5 flex items-center gap-1.5">
-                <code class="flex-1 bg-white rounded px-2 py-1 text-[11px] font-mono text-indigo-800 border border-indigo-100 select-all break-all">
-                  {{ step.cmd }}
-                </code>
-                <button @click="copyStep(idx, step.cmd)"
-                  :class="[
-                    'px-2 py-1 rounded text-[10px] font-medium transition-all flex-shrink-0',
-                    copiedStep === idx
-                      ? 'bg-green-100 text-green-700 border border-green-200'
-                      : 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200'
-                  ]">
-                  {{ copiedStep === idx ? '✓' : '复制' }}
-                </button>
-              </div>
-              <p v-if="step.note" class="text-[10px] text-indigo-400 mt-1 ml-7">{{ step.note }}</p>
+          <!-- One-click install -->
+          <div class="mt-3 bg-white/70 rounded-lg border border-indigo-200 overflow-hidden">
+            <div class="px-3 py-1.5 bg-indigo-100/50 text-[10px] text-indigo-500 font-medium">
+              📋 复制以下命令 → 粘贴到 Claude Code 终端
+            </div>
+            <div class="px-3 py-2 text-[11px] text-indigo-800 leading-relaxed">
+              {{ installPrompt }}
+            </div>
+            <div class="px-3 py-2 border-t border-indigo-100">
+              <button @click="copyPrompt"
+                :class="[
+                  'px-4 py-1.5 rounded-lg text-xs font-medium transition-all',
+                  copiedStep === 0
+                    ? 'bg-green-100 text-green-700 border border-green-200'
+                    : 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-sm'
+                ]">
+                {{ copiedStep === 0 ? '✓ 已复制到剪贴板' : '一键复制' }}
+              </button>
             </div>
           </div>
 
-          <div class="mt-3 flex items-center gap-3 text-[10px] text-indigo-400">
+          <div class="mt-3 flex items-center gap-4 text-[10px] text-indigo-400">
             <span>✅ 饭点自动提醒</span>
             <span>✅ AI 智能推荐</span>
             <span>✅ 终端直接下单</span>
+            <span>✅ 支持 Mac/Win/Linux</span>
           </div>
         </div>
       </div>
