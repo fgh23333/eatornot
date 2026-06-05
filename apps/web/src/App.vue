@@ -136,9 +136,6 @@ function handleFeedbackSubmit(satisfaction: number, notes: string) {
 
         <!-- Loading skeleton -->
         <div v-if="store.loading.value">
-          <div class="p-3 rounded-lg bg-orange-50 max-w-2xl ml-auto text-sm mb-3">
-            {{ store.chatMessages.value[store.chatMessages.value.length - 1]?.content }}
-          </div>
           <SkeletonLoader />
         </div>
 
