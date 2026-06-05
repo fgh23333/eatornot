@@ -40,3 +40,6 @@ knowledge/chroma_db/
 # Claude Code
 .claude/
 .env
+
+# Wrangler
+.wrangler/
