@@ -8,7 +8,11 @@ ENV_FILE = ROOT_DIR / ".env"
 
 
 class Settings(BaseSettings):
-    # LLM config
+    # LLM config — Gemini 官方 API (OpenAI 兼容)
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemma-4-31b-it"
+
+    # Legacy CF AIG (保留兼容)
     CF_AIG_TOKEN: str = ""
     CF_AIG_BASE_URL: str = "https://gateway.ai.cloudflare.com/v1/xxx/default/compat"
     GEMMA_MODEL: str = "google-ai-studio/gemma-4-31b-it"

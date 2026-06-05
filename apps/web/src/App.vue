@@ -70,19 +70,19 @@ function handleFeedbackSubmit(satisfaction: number, notes: string) {
             <TabsTrigger value="data">📈 数据</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="status" class="flex-1 min-h-0 overflow-y-auto mt-3 space-y-3 pr-1">
+          <TabsContent value="status" class="flex-1 min-h-0 overflow-y-auto scrollbar-hidden mt-3 space-y-3 pr-1">
             <TodayDashboard :user-id="store.profile.value.user_id"
               @request-recommend="(mt) => { store.inputValue.value = `帮我选${mt === 'breakfast' ? '早餐' : mt === 'lunch' ? '午餐' : '晚餐'}`; store.handleRecommend() }" />
             <AutoDraft :user-id="store.profile.value.user_id"
               @confirm="(d) => { store.orderResult.value = `订单已确认！共 ${d.items.length} 件，¥${d.total_price}` }" />
           </TabsContent>
 
-          <TabsContent value="mode" class="flex-1 min-h-0 overflow-y-auto mt-3 space-y-3 pr-1">
+          <TabsContent value="mode" class="flex-1 min-h-0 overflow-y-auto scrollbar-hidden mt-3 space-y-3 pr-1">
             <BalanceMode :user-id="store.profile.value.user_id" mood="normal" />
             <ProfileCard :profile="store.profile.value" />
           </TabsContent>
 
-          <TabsContent value="data" class="flex-1 min-h-0 overflow-y-auto mt-3 space-y-3 pr-1">
+          <TabsContent value="data" class="flex-1 min-h-0 overflow-y-auto scrollbar-hidden mt-3 space-y-3 pr-1">
             <LearningPanel :user-id="store.profile.value.user_id" />
             <MetricsPanel :user-id="store.profile.value.user_id" />
           </TabsContent>
@@ -90,7 +90,7 @@ function handleFeedbackSubmit(satisfaction: number, notes: string) {
       </aside>
 
       <!-- Main Content: scrollable -->
-      <main class="flex-1 min-w-0 min-h-0 overflow-y-auto space-y-4 pr-1">
+      <main class="flex-1 min-w-0 min-h-0 overflow-y-auto scrollbar-hidden space-y-4 pr-1">
         <SafetyBanner compact />
 
         <!-- Reminders -->
