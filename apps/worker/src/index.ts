@@ -184,6 +184,25 @@ app.post('/api/feedback', (c) => c.json({ status: 'ok', message: 'Feedback recor
 app.get('/api/demo/learning', (c) => c.json({ learning_points: 5, total_observations: 12 }))
 app.get('/api/demo/metrics', (c) => c.json({ total_decisions: 3, avg_satisfaction: 4.2 }))
 
+// ============ Store Search ============
+app.get('/api/stores/search', (c) => {
+  const city = c.req.query('city') || '北京'
+  const keyword = c.req.query('keyword') || ''
+  const mockStores = [
+    { storeCode: '1101001', storeName: `${city}王府井餐厅`, address: `${city}市东城区王府井大街88号`, distance: '0.5km', beCode: '1101001' },
+    { storeCode: '1101002', storeName: `${city}西单餐厅`, address: `${city}市西城区西单北大街120号`, distance: '1.2km', beCode: '1101002' },
+    { storeCode: '1101003', storeName: `${city}三里屯餐厅`, address: `${city}市朝阳区三里屯路19号`, distance: '2.1km', beCode: '1101003' },
+    { storeCode: '1101004', storeName: `${city}国贸餐厅`, address: `${city}市朝阳区建国门外大街1号`, distance: '3.5km', beCode: '1101004' },
+    { storeCode: '1101005', storeName: `${city}望京餐厅`, address: `${city}市朝阳区望京西路`, distance: '4.8km', beCode: '1101005' },
+    { storeCode: '1101006', storeName: `${city}中关村餐厅`, address: `${city}市海淀区中关村大街`, distance: '5.3km', beCode: '1101006' },
+  ]
+  // Filter by keyword if provided
+  const filtered = keyword
+    ? mockStores.filter(s => s.storeName.includes(keyword) || s.address.includes(keyword))
+    : mockStores
+  return c.json({ stores: filtered, total: filtered.length, city, is_mock: true })
+})
+
 // ============ Plan ============
 app.post('/api/plan/refine', (c) => c.json({ error: 'Plan refine not available on Workers' }))
 

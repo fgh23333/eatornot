@@ -8,6 +8,21 @@ from services.db_service import db_service
 router = APIRouter()
 
 
+@router.get("/stores/search")
+async def search_stores(city: str = "北京", keyword: str = ""):
+    """Search nearby McDonald's stores (mock data for demo)."""
+    mock_stores = [
+        {"storeCode": "1101001", "storeName": f"{city}王府井餐厅", "address": f"{city}市东城区王府井大街88号", "distance": "0.5km", "beCode": "1101001"},
+        {"storeCode": "1101002", "storeName": f"{city}西单餐厅", "address": f"{city}市西城区西单北大街120号", "distance": "1.2km", "beCode": "1101002"},
+        {"storeCode": "1101003", "storeName": f"{city}三里屯餐厅", "address": f"{city}市朝阳区三里屯路19号", "distance": "2.1km", "beCode": "1101003"},
+        {"storeCode": "1101004", "storeName": f"{city}国贸餐厅", "address": f"{city}市朝阳区建国门外大街1号", "distance": "3.5km", "beCode": "1101004"},
+        {"storeCode": "1101005", "storeName": f"{city}望京餐厅", "address": f"{city}市朝阳区望京西路", "distance": "4.8km", "beCode": "1101005"},
+        {"storeCode": "1101006", "storeName": f"{city}中关村餐厅", "address": f"{city}市海淀区中关村大街", "distance": "5.3km", "beCode": "1101006"},
+    ]
+    filtered = [s for s in mock_stores if keyword in s["storeName"] or keyword in s["address"]] if keyword else mock_stores
+    return {"stores": filtered, "total": len(filtered), "city": city, "is_mock": True}
+
+
 @router.post("/meal/record", response_model=MealRecord)
 async def record_meal(record: MealRecord):
     """Save a meal record."""

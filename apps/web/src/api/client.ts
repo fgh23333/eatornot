@@ -292,6 +292,13 @@ export async function mealDecision(request: {
   return res.json()
 }
 
+export async function searchStores(city: string, keyword: string = ''): Promise<{ stores: any[]; total: number; is_mock?: boolean }> {
+  const params = new URLSearchParams({ city })
+  if (keyword) params.set('keyword', keyword)
+  const res = await fetch(`${BASE}/api/stores/search?${params}`)
+  return res.json()
+}
+
 export async function getProviderStatus(): Promise<any> {
   const res = await fetch(`${BASE}/api/provider/status`)
   return res.json()

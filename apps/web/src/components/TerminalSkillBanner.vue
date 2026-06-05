@@ -20,7 +20,7 @@ function dismiss() {
 }
 
 function copyCommand() {
-  navigator.clipboard.writeText('.\\scripts\\claude-setup\\install.ps1')
+  navigator.clipboard.writeText('cd eatornot && powershell scripts\\claude-setup\\install.ps1')
   copied.value = true
   setTimeout(() => { copied.value = false }, 2000)
 }
@@ -35,7 +35,7 @@ function copyCommand() {
         <p class="text-xs font-semibold text-indigo-900">终端也能点餐</p>
         <p class="text-[10px] text-indigo-600 mt-0.5">在 Claude Code 里说 "帮我点午餐"</p>
         <code class="text-[10px] bg-white/60 px-1.5 py-0.5 rounded mt-1 inline-block text-indigo-700">
-          .\scripts\claude-setup\install.ps1
+          cd eatornot && powershell scripts\claude-setup\install.ps1
         </code>
       </div>
     </div>
@@ -59,11 +59,11 @@ function copyCommand() {
         <div class="flex-1">
           <h4 class="font-semibold text-indigo-900 text-sm">终端也能点餐！</h4>
           <p class="text-xs text-indigo-600 mt-1 leading-relaxed">
-            安装 Claude Code / Cursor Skill，在终端里说 <strong>"帮我点午餐"</strong> 即可获得 AI 推荐 + 一键下单
+            安装 Claude Code Skill，在终端里说 <strong>"帮我点午餐"</strong> 即可获得 AI 推荐 + 一键下单
           </p>
           <div class="mt-2.5 flex items-center gap-2">
             <div class="flex-1 bg-white/70 rounded-lg px-3 py-1.5 text-xs font-mono text-indigo-800 border border-indigo-100 select-all">
-              .\scripts\claude-setup\install.ps1
+              cd eatornot && powershell scripts\claude-setup\install.ps1
             </div>
             <button @click="copyCommand"
               :class="[
