@@ -73,7 +73,45 @@ if (Test-Path $SettingsDst) {
     Write-Host "[OK] Created settings.local.json from template" -ForegroundColor Green
 }
 
-# 4. Summary
+# 4. Configure McDonald's MCP server
+Write-Host ""
+Write-Host "--- McDonald's MCP 配置 ---" -ForegroundColor Cyan
+Write-Host ""
+
+# Check if mcd-mcp is already configured
+$mcpCheck = claude mcp list 2>$null | Select-String "mcd-mcp"
+
+if ($mcpCheck) {
+    Write-Host "[--] mcd-mcp already configured (user scope)" -ForegroundColor Gray
+    Write-Host "     $mcpCheck" -ForegroundColor Gray
+} else {
+    Write-Host "麦当劳 MCP 用于终端点餐功能（查菜单、下单、领券等）。" -ForegroundColor White
+    Write-Host "需要你自己的麦当劳 MCP Token。" -ForegroundColor White
+    Write-Host ""
+    Write-Host "获取方式：" -ForegroundColor Yellow
+    Write-Host "  1. 访问 https://mcp.mcd.cn 或联系麦当劳 MCP 服务获取 Token"
+    Write-Host "  2. 如果暂时没有 Token，可以跳过（将使用 Mock 数据）"
+    Write-Host ""
+
+    $token = Read-Host "请输入你的麦当劳 MCP Token（留空跳过）"
+
+    if ($token.Trim() -ne "") {
+        Write-Host "[..] Configuring mcd-mcp..." -ForegroundColor Yellow
+        claude mcp add mcd-mcp -s user --transport http --url https://mcp.mcd.cn --header "Authorization: Bearer $($token.Trim())"
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[OK] mcd-mcp configured successfully" -ForegroundColor Green
+        } else {
+            Write-Host "[WARN] Failed to configure mcd-mcp. You can run manually:" -ForegroundColor Yellow
+            Write-Host "       claude mcp add mcd-mcp -s user --transport http --url https://mcp.mcd.cn --header `"Authorization: Bearer YOUR_TOKEN`"" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "[SKIP] mcd-mcp not configured. Terminal ordering will use mock data." -ForegroundColor Yellow
+        Write-Host "       To configure later:" -ForegroundColor Yellow
+        Write-Host '       claude mcp add mcd-mcp -s user --transport http --url https://mcp.mcd.cn --header "Authorization: Bearer YOUR_TOKEN"' -ForegroundColor Yellow
+    }
+}
+
+# 5. Summary
 Write-Host ""
 Write-Host "-------------------------------------" -ForegroundColor Cyan
 Write-Host "  Installation Complete!" -ForegroundColor Green

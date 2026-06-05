@@ -16,7 +16,24 @@
 
 ## 快速开始
 
-### 1. 克隆项目后运行安装脚本
+### 1. 安装麦当劳 MCP（终端点餐必需）
+
+终端点餐功能依赖 `mcd-mcp` MCP 服务器。**每个用户需要使用自己的 Token。**
+
+```powershell
+# 添加麦当劳 MCP 到你的 Claude Code（用户级配置）
+claude mcp add mcd-mcp -s user --transport http `
+  --url https://mcp.mcd.cn `
+  --header "Authorization: Bearer YOUR_TOKEN"
+```
+
+> **如何获取 Token？** 访问 [https://mcp.mcd.cn](https://mcp.mcd.cn) 注册并获取你自己的 API Token。
+>
+> ⚠️ 请勿使用他人的 Token。Token 关联个人麦当劳账号，涉及订单和支付。
+
+如果暂时没有 Token，可以跳过此步骤——终端点餐会降级使用 Mock 数据。
+
+### 2. 运行安装脚本
 
 ```powershell
 # 在项目根目录执行
@@ -27,12 +44,13 @@
 - 创建 `.claude/skills/` 目录
 - 复制 `meal-order.md` skill 文件
 - 复制 `settings.local.json` 权限配置
+- **交互式引导**你配置麦当劳 MCP（如果尚未配置）
 
-### 2. 重启 Claude Code
+### 3. 重启 Claude Code
 
-关闭并重新打开 Claude Code 会话，让 skill 生效。
+关闭并重新打开 Claude Code 会话，让 skill 和 MCP 生效。
 
-### 3. 测试
+### 4. 测试
 
 在终端输入：
 
@@ -117,8 +135,14 @@ Worker 会在这些时间点：
 **Q: 为什么 skill 不生效？**
 A: 确保：1) 安装脚本已运行；2) Claude Code 已重启；3) 你使用的触发词在 skill 的触发条件列表中。
 
+**Q: mcd-mcp 工具报错 / 连接失败？**
+A: 检查：1) 已配置 mcd-mcp（`claude mcp list` 查看是否有 mcd-mcp）；2) Token 有效且未过期；3) 网络可访问 `https://mcp.mcd.cn`。如无 Token，设置 `USE_MOCK_MCP=true` 使用 Mock 数据。
+
 **Q: 如何修改 Worker API 地址？**
 A: 编辑 `skills/meal-order.md`，把里面的 `https://eatornot-api.jimmy120070.workers.dev` 替换为你自己的 Worker 域名。
 
 **Q: 服务端 Cron 和本地 Cron 会重复提醒吗？**
 A: 不会。服务端 Cron 写入数据库，前端轮询获取；本地 Cron 只在终端输出。两者独立工作。
+
+**Q: 如何获取麦当劳 MCP Token？**
+A: 访问 [https://mcp.mcd.cn](https://mcp.mcd.cn) 注册获取。Token 关联你的麦当劳账号，请勿与他人共享。

@@ -98,14 +98,22 @@ pnpm dev
 ### 终端点餐（Claude Code）
 
 ```powershell
-# 一键安装 skill + 权限
+# 1. 配置麦当劳 MCP（需要你自己的 Token）
+#    访问 https://mcp.mcd.cn 获取 Token
+claude mcp add mcd-mcp -s user --transport http `
+  --url https://mcp.mcd.cn `
+  --header "Authorization: Bearer YOUR_TOKEN"
+
+# 2. 一键安装 skill + 权限
 .\scripts\claude-setup\install.ps1
 
-# 重启 Claude Code，然后说：
+# 3. 重启 Claude Code，然后说：
 帮我点午餐     # AI 推荐 + 查门店 + 下单
 领券           # 自动领取麦当劳优惠券
 有什么活动     # 查询当月活动日历
 ```
+
+> ⚠️ 每个 Claude Code 用户需要使用**自己的**麦当劳 MCP Token。详见 [scripts/claude-setup/README.md](scripts/claude-setup/README.md)。
 
 ### 配置环境变量
 
@@ -120,7 +128,7 @@ cp .env.example .env
 | `CF_AIG_TOKEN` | ✅ | Cloudflare AI Gateway Token |
 | `CF_AIG_BASE_URL` | ✅ | AI Gateway 兼容端点 URL |
 | `GEMMA_MODEL` | ✅ | Gemma 模型 ID（如 `google-ai-studio/gemma-4-31b-it`） |
-| `MCD_MCP_TOKEN` | ❌ | 麦当劳 MCP Token（无则用 Mock 数据） |
+| `MCD_MCP_TOKEN` | ❌ | 麦当劳 MCP Token（[获取](https://mcp.mcd.cn)，无则用 Mock 数据） |
 | `DATABASE_URL` | ❌ | SQLite 路径（默认 `./data/eatornot.db`） |
 
 ---
