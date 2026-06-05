@@ -9,7 +9,7 @@ const step = ref(0)
 const totalSteps = 3
 
 const form = ref({
-  user_id: 'demo-user',
+  user_id: `user_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
   name: '',
   sex: 'male',
   age: 25,
