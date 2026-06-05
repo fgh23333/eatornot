@@ -80,3 +80,23 @@ class ConversationDB(Base):
     content = Column(String, default="")
     timestamp = Column(DateTime, default=datetime.now)
     extra_data = Column(JSON, default={})  # 使用 extra_data 代替 metadata
+
+
+class ActivePlanDB(Base):
+    """活跃方案表"""
+    __tablename__ = "active_plans"
+
+    plan_id = Column(String, primary_key=True)
+    user_id = Column(String, ForeignKey("users.user_id"))
+    version = Column(Integer, default=1)
+    items = Column(JSON, default=[])
+    nutrition = Column(JSON, default={})
+    price = Column(Float, default=0.0)
+    reasons = Column(JSON, default=[])
+    tradeoffs = Column(JSON, default=[])
+    change_log = Column(JSON, default=[])
+    constraints = Column(JSON, default=[])
+    title = Column(String, default="")
+    mode = Column(String, default="")
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)

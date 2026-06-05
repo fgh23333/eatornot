@@ -1,7 +1,11 @@
-"""对话状态管理服务"""
+"""对话状态管理服务 — SQLite 持久化"""
 
-from dataclasses import dataclass, field
 from datetime import datetime
+from dataclasses import dataclass, field
+
+from sqlalchemy import select, delete
+from core.database import async_session
+from models.db_models import ConversationDB
 
 
 @dataclass
@@ -13,35 +17,93 @@ class ChatMessage:
 
 
 class ConversationService:
-    """管理多轮对话状态"""
+    """管理多轮对话状态 — 持久化到 SQLite"""
 
     def __init__(self):
-        self._conversations: dict[str, list[ChatMessage]] = {}  # user_id -> messages
+        # 内存缓存，避免频繁查库
+        self._cache: dict[str, list[ChatMessage]] = {}
 
-    def add_message(self, user_id: str, role: str, content: str, metadata: dict = None) -> ChatMessage:
+    async def add_message(self, user_id: str, role: str, content: str, metadata: dict = None) -> ChatMessage:
         """添加消息到对话历史"""
-        if user_id not in self._conversations:
-            self._conversations[user_id] = []
-
         msg = ChatMessage(role=role, content=content, metadata=metadata or {})
-        self._conversations[user_id].append(msg)
+
+        # 写入数据库
+        async with async_session() as session:
+            db_msg = ConversationDB(
+                user_id=user_id,
+                role=role,
+                content=content,
+                timestamp=msg.timestamp,
+                extra_data=metadata or {},
+            )
+            session.add(db_msg)
+            await session.commit()
+
+        # 更新缓存
+        if user_id not in self._cache:
+            self._cache[user_id] = []
+        self._cache[user_id].append(msg)
         return msg
 
-    def get_history(self, user_id: str, limit: int = 50) -> list[ChatMessage]:
+    # 同步版本（兼容旧代码）
+    def add_message_sync(self, user_id: str, role: str, content: str, metadata: dict = None) -> ChatMessage:
+        msg = ChatMessage(role=role, content=content, metadata=metadata or {})
+        if user_id not in self._cache:
+            self._cache[user_id] = []
+        self._cache[user_id].append(msg)
+        return msg
+
+    async def get_history(self, user_id: str, limit: int = 50) -> list[ChatMessage]:
         """获取对话历史"""
-        messages = self._conversations.get(user_id, [])
+        # 优先用缓存
+        if user_id in self._cache:
+            return self._cache[user_id][-limit:]
+
+        # 从数据库加载
+        async with async_session() as session:
+            result = await session.execute(
+                select(ConversationDB)
+                .where(ConversationDB.user_id == user_id)
+                .order_by(ConversationDB.id)
+                .limit(limit)
+            )
+            rows = result.scalars().all()
+            messages = [
+                ChatMessage(
+                    role=row.role,
+                    content=row.content,
+                    timestamp=row.timestamp,
+                    metadata=row.extra_data or {},
+                )
+                for row in rows
+            ]
+            self._cache[user_id] = messages
+            return messages
+
+    # 同步版本（兼容旧代码）
+    def get_history_sync(self, user_id: str, limit: int = 50) -> list[ChatMessage]:
+        messages = self._cache.get(user_id, [])
         return messages[-limit:]
 
-    def reset_conversation(self, user_id: str) -> bool:
+    async def reset_conversation(self, user_id: str) -> bool:
         """重置对话历史"""
-        if user_id in self._conversations:
-            self._conversations[user_id] = []
-            return True
-        return False
+        async with async_session() as session:
+            await session.execute(
+                delete(ConversationDB).where(ConversationDB.user_id == user_id)
+            )
+            await session.commit()
+
+        self._cache.pop(user_id, None)
+        return True
+
+    # 同步版本
+    def reset_conversation_sync(self, user_id: str) -> bool:
+        self._cache[user_id] = []
+        return True
 
     def reset_all(self) -> None:
-        """清除所有对话"""
-        self._conversations.clear()
+        """清除内存缓存（数据库需单独清理）"""
+        self._cache.clear()
 
 
 # 全局实例
