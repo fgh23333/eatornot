@@ -185,7 +185,21 @@ app.get('/api/demo/metrics', (c) => c.json({ total_decisions: 3, avg_satisfactio
 app.post('/api/plan/refine', (c) => c.json({ error: 'Plan refine not available on Workers' }))
 
 // ============ Order ============
-app.post('/api/order/create', (c) => c.json({ success: false, message: 'Use Docker Compose for full features' }))
+app.post('/api/order/create', async (c) => {
+  let body: any = {}
+  try { body = await c.req.json() } catch {}
+  const orderId = `demo-${Date.now()}`
+  const totalPrice = body.items?.reduce((sum: number, i: any) => sum + (i.price || 0) * (i.quantity || 1), 0) || 0
+  return c.json({
+    success: true,
+    order_id: orderId,
+    pay_url: `https://eatornot-api.jimmy120070.workers.dev/order/${orderId}`,
+    status: 'pending_payment',
+    total_price: totalPrice,
+    message: 'Demo 订单已创建（Workers 模式）',
+    is_mock: true,
+  })
+})
 app.post('/api/order/confirm', (c) => c.json({ order_id: 'demo', status: 'confirmed', message: 'Demo', is_mock: true }))
 
 // ============ Balance ============

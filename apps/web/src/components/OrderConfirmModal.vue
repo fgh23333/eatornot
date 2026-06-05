@@ -17,7 +17,11 @@ async function handleConfirm() {
   loading.value = true
   try {
     const result = await createOrder(props.plan, storeCode.value)
-    emit('order-complete', { success: true, message: result.message || '下单成功！' })
+    if (result.success) {
+      emit('order-complete', { success: true, message: result.message || '下单成功！' })
+    } else {
+      emit('order-complete', { success: false, message: result.message || '下单失败' })
+    }
   } catch {
     emit('order-complete', { success: false, message: '下单请求失败' })
   } finally {
@@ -27,7 +31,7 @@ async function handleConfirm() {
 </script>
 
 <template>
-  <DialogRoot :open="true">
+  <DialogRoot :default-open="true">
     <DialogContent class="max-w-md">
       <h2 class="text-lg font-semibold mb-4">📋 确认订单</h2>
       <div class="space-y-2 mb-4">
