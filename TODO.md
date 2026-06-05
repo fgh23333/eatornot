@@ -31,27 +31,25 @@
 - ✅ Tab 侧边栏布局 (状态/模式/数据 三页签)
 - ✅ 隐藏滚动条 CSS 工具类
 
+### ✅ Phase 5: 部署 + 前端打磨
+- ✅ **Cloudflare Pages** 前端部署 (eatornot-7tp.pages.dev)
+- ✅ **Cloudflare Workers** 后端部署 Hono.js (eatornot-api.jimmy120070.workers.dev)
+- ✅ **D1 数据库** 用户档案持久化
+- ✅ **Docker Compose** 一键本地部署
+- ✅ 消除 demo-user 硬编码 → getUserId() 动态获取
+- ✅ 持久化 ConversationService + ActivePlanService → SQLite
+- ✅ BalanceMode 心情输入 (5种情绪 → 自动推荐模式)
+- ✅ Skeleton 加载动画 + 快捷回复按钮
+- ✅ RecommendationCard 模式图标 + hover 动画
+- ✅ 前端 VITE_API_URL 环境变量支持
+
 ---
 
 ## 待完成
 
 ### 🔥 高优先级 (Hackathon 展示关键)
 
-- [ ] **消除 demo-user 硬编码**
-  - 前端 15+ 文件硬编码 `'demo-user'`
-  - 需要从 profile 获取真实 user_id
-  - API client 默认参数改为动态
-
-- [ ] **持久化核心服务**
-  - `ConversationService` 内存 dict → SQLite
-  - `ActivePlanService` 内存 dict → SQLite
-  - 重启不丢数据
-
-- [ ] **前端交互打磨**
-  - BalanceMode mood 接入实际情绪输入
-  - 推荐结果页快捷回复按钮 ("换一个" / "少油" / "更便宜")
-  - 分析时 skeleton 加载动画
-  - 移动端响应式适配
+所有高优先级已完成！✅
 
 ### 📸 中优先级
 
