@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from openai import AsyncOpenAI
 from core.config import get_settings
 
@@ -55,6 +56,8 @@ async def generate_json(system_prompt: str, user_prompt: str, schema_hint: dict 
             max_tokens=2048,
         )
         text = response.choices[0].message.content or "{}"
+        # Strip Gemma 4 <thought> tags
+        text = re.sub(r'<thought>[\s\S]*?</thought>', '', text).strip()
         # Try to extract JSON from markdown code blocks
         if "```json" in text:
             text = text.split("```json")[1].split("```")[0].strip()
@@ -82,7 +85,16 @@ async def generate_text(system_prompt: str, user_prompt: str) -> str:
             temperature=0.5,
             max_tokens=1024,
         )
-        return response.choices[0].message.content or ""
+        raw = response.choices[0].message.content or ""
+        return strip_thought_tags(raw)
+    except Exception as e:
+        logger.error(f"LLM generate_text failed: {e}")
+        return f"[LLM error: {e}]"
+
+
+def strip_thought_tags(text: str) -> str:
+    """Remove Gemma 4 <thought>...</thought> tags from text."""
+    return re.sub(r'<thought>[\s\S]*?</thought>', '', text).strip()
     except Exception as e:
         logger.error(f"LLM generate_text failed: {e}")
         return f"[LLM error: {e}]"

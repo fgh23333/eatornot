@@ -14,6 +14,11 @@ import {
   type QuickProfileData,
 } from '@/api/client'
 
+// Strip LLM <thought> tags from text for clean display
+function stripThought(text: string): string {
+  return text.replace(/<thought>[\s\S]*?<\/thought>/g, '').trim()
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
@@ -94,7 +99,7 @@ export function useAppStore() {
         },
       })
       recommendation.value = result
-      chatMessages.value.push({ role: 'assistant', content: result.summary })
+      chatMessages.value.push({ role: 'assistant', content: stripThought(result.summary || '') })
     } catch (err) {
       chatMessages.value.push({ role: 'assistant', content: '抱歉，分析失败了，请重试。' })
     }

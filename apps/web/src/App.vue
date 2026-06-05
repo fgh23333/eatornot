@@ -105,7 +105,7 @@ function handleFeedbackSubmit(satisfaction: number, notes: string) {
         <div v-if="store.chatMessages.value.length" class="space-y-2">
           <div v-for="(msg, i) in store.chatMessages.value" :key="i"
             :class="['p-3 rounded-lg max-w-2xl text-sm', msg.role === 'user' ? 'bg-orange-50 ml-auto' : 'bg-white border']">
-            {{ msg.content }}
+            {{ msg.content?.replace(/<thought>[\s\S]*?<\/thought>/g, '').trim() || msg.content }}
           </div>
         </div>
 
@@ -141,7 +141,7 @@ function handleFeedbackSubmit(satisfaction: number, notes: string) {
 
         <!-- Recommendation Results -->
         <div v-if="store.recommendation.value && !store.selectedPlan.value" class="space-y-4">
-          <p class="text-sm text-gray-600">{{ store.recommendation.value.summary }}</p>
+          <p class="text-sm text-gray-600">{{ store.recommendation.value.summary?.replace(/<thought>[\s\S]*?<\/thought>/g, '').trim() }}</p>
           <div v-if="store.recommendation.value.safety_warnings.length" class="flex flex-wrap gap-2">
             <span v-for="w in store.recommendation.value.safety_warnings" :key="w" class="text-xs px-2 py-1 rounded bg-yellow-50 text-yellow-700">⚠️ {{ w }}</span>
           </div>
