@@ -4,6 +4,7 @@ import { cors } from 'hono/cors'
 type Bindings = {
   DB: D1Database
   GEMINI_API_KEY: string
+  AI_GATEWAY_ID?: string
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -100,13 +101,62 @@ app.post('/api/recommend', async (c) => {
 
   if (apiKey) {
     try {
-      const recommendation = await callGemini(apiKey, message, mode)
+      const recommendation = await callGemini(apiKey, message, mode, c.env.AI_GATEWAY_ID)
       return c.json(recommendation)
-    } catch {
+    } catch (err: any) {
+      console.error('Gemini call failed:', err?.message || String(err))
       // fallback to mock
     }
+  } else {
+    console.warn('GEMINI_API_KEY not set, using mock')
   }
   return c.json(mockRecommend(message))
+})
+
+// ============ Debug Gemini ============
+app.get('/api/debug/gemini', async (c) => {
+  const apiKey = c.env.GEMINI_API_KEY
+  if (!apiKey) {
+    return c.json({ error: 'GEMINI_API_KEY not set', has_key: false })
+  }
+  const accountId = 'bbd869342ef49cfea41170378427db5d'
+  const gateway = c.env.AI_GATEWAY_ID || 'eatornot'
+  const gatewayUrl = `https://gateway.ai.cloudflare.com/v1/${accountId}/${gateway}/compat/chat/completions`
+
+  try {
+    const resp = await fetch(
+      gatewayUrl,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google-ai-studio/gemma-4-31b-it',
+          messages: [{ role: 'user', content: 'Say hello in JSON: {"greeting":"..."}' }],
+          temperature: 0.5,
+        }),
+      }
+    )
+    const status = resp.status
+    const rawText = await resp.text()
+    let result: any = {}
+    try { result = JSON.parse(rawText) } catch {}
+    return c.json({
+      has_key: true,
+      key_prefix: apiKey.substring(0, 8) + '...',
+      gateway_url: gatewayUrl,
+      api_status: status,
+      model_used: 'google-ai-studio/gemma-4-31b-it',
+      response_ok: resp.ok,
+      content_preview: result.choices?.[0]?.message?.content?.substring(0, 200) || null,
+      raw_response: rawText.substring(0, 500),
+      error: result.error || null,
+    })
+  } catch (err: any) {
+    return c.json({ has_key: true, error: err.message })
+  }
 })
 
 // ============ Dashboard ============
@@ -154,13 +204,18 @@ function defaultProfile(userId: string) {
   }
 }
 
-async function callGemini(apiKey: string, message: string, mode: string): Promise<any> {
+async function callGemini(apiKey: string, message: string, mode: string, gatewayId?: string): Promise<any> {
   const systemPrompt = `你是 EatOrNot 饮食决策助手。用户会告诉你他们想吃什么，你需要给出 3 个推荐方案。
 每个方案包含：title(标题), mode(模式: disciplined/budget_friendly/controlled_indulgence), items(菜品数组,每项含name/price/calories), estimated_price(总价), estimated_calories(总热量), protein, fat, carbohydrate, sodium, pros(优点数组), cons(缺点数组), final_reason(推荐理由)。
-返回 JSON 格式: {"plans": [...], "summary": "总结"}。菜品来自麦当劳，给出真实价格和热量估算。`
+你必须只返回纯 JSON，不要有任何 markdown 代码块标记或其他文字。格式: {"plans": [...], "summary": "总结"}。菜品来自麦当劳，给出真实价格和热量估算。`
+
+  // 通过 Cloudflare AI Gateway 兼容端点中转（绕过地理限制）
+  const accountId = 'bbd869342ef49cfea41170378427db5d'
+  const gateway = gatewayId || 'eatornot'
+  const gatewayUrl = `https://gateway.ai.cloudflare.com/v1/${accountId}/${gateway}/compat/chat/completions`
 
   const resp = await fetch(
-    'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+    gatewayUrl,
     {
       method: 'POST',
       headers: {
@@ -168,37 +223,72 @@ async function callGemini(apiKey: string, message: string, mode: string): Promis
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gemma-4-31b-it',
+        model: 'google-ai-studio/gemma-4-31b-it',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: message },
         ],
-        response_format: { type: 'json_object' },
+        temperature: 0.7,
       }),
     }
   )
+
+  if (!resp.ok) {
+    const errText = await resp.text()
+    console.error('Gemini API error:', resp.status, errText)
+    throw new Error(`Gemini API ${resp.status}: ${errText.substring(0, 200)}`)
+  }
+
   const result: any = await resp.json()
-  const content = result.choices?.[0]?.message?.content || ''
+  let content = result.choices?.[0]?.message?.content || ''
+
+  // 去掉 <thought>...</thought> 标签（Gemma 4 的思考过程）
+  content = content.replace(/<thought>[\s\S]*?<\/thought>/g, '').trim()
+
+  // 尝试从内容中提取 JSON（可能包裹在 markdown 代码块中）
+  let jsonStr = content
+  const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (jsonMatch) {
+    jsonStr = jsonMatch[1].trim()
+  }
+
+  // 如果还不是有效 JSON 开头，尝试直接找 { 的位置
+  if (!jsonStr.startsWith('{')) {
+    const braceIdx = jsonStr.indexOf('{')
+    if (braceIdx >= 0) {
+      jsonStr = jsonStr.substring(braceIdx)
+    }
+  }
+
+  // 辅助函数：将 "25g" / "850mg" 等字符串转为数字
+  const toNum = (v: any, fallback: number): number => {
+    if (typeof v === 'number') return v
+    if (typeof v === 'string') {
+      const n = parseFloat(v.replace(/[^\d.]/g, ''))
+      return isNaN(n) ? fallback : n
+    }
+    return fallback
+  }
 
   try {
-    const parsed = JSON.parse(content)
+    const parsed = JSON.parse(jsonStr)
     if (parsed.plans) {
       parsed.plans.forEach((plan: any, i: number) => {
         plan.id = plan.id || `plan-${i + 1}`
         plan.mode = plan.mode || ['disciplined', 'budget_friendly', 'controlled_indulgence'][i % 3]
         plan.items = (plan.items || []).map((item: any) => ({
           name: item.name, item_code: item.item_code || `M${100 + i}`,
-          category: item.category || 'main', price: item.price || 15,
-          calories: item.calories || 300, protein: item.protein || 10,
-          fat: item.fat || 5, carbohydrate: item.carbohydrate || 30,
-          sodium: item.sodium || 500, tags: item.tags || [],
+          category: item.category || 'main', price: toNum(item.price, 15),
+          calories: toNum(item.calories, 300), protein: toNum(item.protein, 10),
+          fat: toNum(item.fat, 5), carbohydrate: toNum(item.carbohydrate, 30),
+          sodium: toNum(item.sodium, 500), tags: item.tags || [],
         }))
-        plan.estimated_price = plan.estimated_price || plan.items.reduce((s: number, i: any) => s + i.price, 0)
-        plan.estimated_calories = plan.estimated_calories || plan.items.reduce((s: number, i: any) => s + i.calories, 0)
-        plan.protein = plan.protein || 20
-        plan.fat = plan.fat || 10
-        plan.carbohydrate = plan.carbohydrate || 50
-        plan.sodium = plan.sodium || 800
+        plan.estimated_price = toNum(plan.estimated_price, plan.items.reduce((s: number, i: any) => s + i.price, 0))
+        plan.estimated_calories = toNum(plan.estimated_calories, plan.items.reduce((s: number, i: any) => s + i.calories, 0))
+        plan.protein = toNum(plan.protein, 20)
+        plan.fat = toNum(plan.fat, 10)
+        plan.carbohydrate = toNum(plan.carbohydrate, 50)
+        plan.sodium = toNum(plan.sodium, 800)
         plan.budget_impact = plan.budget_impact || `占日预算${30 + i * 10}%`
         plan.calorie_impact = plan.calorie_impact || `占日热量${20 + i * 5}%`
         plan.indulgence_impact = plan.indulgence_impact || ['低', '中', '高'][i % 3]
@@ -212,9 +302,13 @@ async function callGemini(apiKey: string, message: string, mode: string): Promis
       parsed.agent_debate = parsed.agent_debate || []
       parsed.safety_warnings = parsed.safety_warnings || []
       parsed.summary = parsed.summary || ''
+      parsed.source = 'gemini'
       return parsed
     }
-  } catch {}
+  } catch (parseErr) {
+    console.error('JSON parse failed, raw content:', content.substring(0, 300))
+    throw parseErr
+  }
   return mockRecommend(message)
 }
 
