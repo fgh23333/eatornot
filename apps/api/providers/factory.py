@@ -6,7 +6,6 @@ from .base import FoodProvider, ProviderStatus
 from .mock_mcdonalds_provider import MockMcDonaldsProvider
 from .mcdonalds_mcp_provider import McDonaldsMcpProvider
 from .manual_provider import ManualMealProvider
-from .mock_meituan_provider import MockMeituanProvider
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +28,6 @@ class ProviderFactory:
         self._providers = {
             "mcdonalds_mcp": McDonaldsMcpProvider(),
             "mock_mcdonalds": MockMcDonaldsProvider(),
-            "mock_meituan": MockMeituanProvider(),
             "manual": ManualMealProvider(),
         }
 

@@ -259,49 +259,6 @@ function mockRecommend(message: string) {
       },
     ],
     agent_debate: [],
-    debate: {
-      debate_id: 'debate-workers-001',
-      stages: [
-        {
-          stage: 'initial_opinions',
-          title: '第一轮：初始判断',
-          messages: [
-            { agent: '营养Agent', position: '推荐板烧鸡腿堡+玉米杯组合，蛋白质充足且热量可控。', confidence: 0.85 },
-            { agent: '预算Agent', position: '麦香鸡+小薯条性价比最高，¥19 即可吃饱。', confidence: 0.9 },
-            { agent: '食欲Agent', position: '用户心情疲惫，可以适当犒劳，巨无霸是经典之选。', confidence: 0.7 },
-            { agent: '安全Agent', position: '注意钠摄入，快乐套餐钠超1195mg，接近日限制。', confidence: 0.95, warning: '快乐套餐钠含量接近日限量' },
-            { agent: '减脂Agent', position: '首选自律方案，490kcal 占日热量24%，留有余量。', confidence: 0.8 },
-          ],
-        },
-        {
-          stage: 'conflicts',
-          title: '第二轮：发现冲突',
-          messages: [
-            { agent: '食欲Agent', position: '疲惫时应该犒劳自己，快乐最重要。', confidence: 0.75, conflict_with: '减脂Agent', reason: '犒劳 vs 减脂目标的矛盾' },
-            { agent: '预算Agent', position: '快乐套餐¥44超出预算，省钱方案更合理。', confidence: 0.85, conflict_with: '食欲Agent', reason: '预算限制 vs 满足感' },
-          ],
-        },
-        {
-          stage: 'compromise',
-          title: '第三轮：形成妥协',
-          messages: [
-            { agent: '营养Agent', position: '三个方案各有优势，让用户根据当前最看重的维度选择。', confidence: 0.9, accepted_by: ['预算Agent', '减脂Agent'] },
-            { agent: '安全Agent', position: '无论选哪个方案，建议额外补充蔬果以平衡钠摄入。', confidence: 0.95 },
-          ],
-        },
-        {
-          stage: 'final_vote',
-          title: '第四轮：最终投票',
-          messages: [
-            { agent: '营养Agent', vote: 'approve', position: '三个方案营养搭配合理' },
-            { agent: '预算Agent', vote: 'approve', position: '价格均在预算范围内' },
-            { agent: '食欲Agent', vote: 'approve', position: '提供了不同满足度的选择' },
-            { agent: '安全Agent', vote: 'warn', position: '快乐套餐钠偏高，注意控制' },
-            { agent: '减脂Agent', vote: 'approve', position: '自律方案完美符合减脂目标' },
-          ],
-        },
-      ],
-    },
     summary: `基于「${message}」，智囊团准备了 3 个方案：自律之选（低卡高蛋白）、省钱套餐（性价比之王）、快乐套餐（犒劳自己）。`,
     safety_warnings: [],
   }
