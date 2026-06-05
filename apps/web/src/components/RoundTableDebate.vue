@@ -53,17 +53,18 @@ const isAutoPlaying = ref(false)
 let autoTimer: ReturnType<typeof setInterval> | null = null
 
 function startAutoPlay() {
-  if (!props.debate?.stages?.length) return
+  const stages = props.debate?.stages
+  if (!stages?.length) return
   isAutoPlaying.value = true
-  activeStage.value = props.debate.stages[0].stage
+  activeStage.value = stages[0]!.stage
   let idx = 0
   autoTimer = setInterval(() => {
     idx++
-    if (idx >= props.debate.stages.length) {
+    if (idx >= stages.length) {
       stopAutoPlay()
       return
     }
-    activeStage.value = props.debate.stages[idx].stage
+    activeStage.value = stages[idx]!.stage
   }, 2500)
 }
 
@@ -142,7 +143,7 @@ const voteSummary = computed(() => {
           </button>
           <div v-if="idx < debate.stages.length - 1"
             class="flex-1 h-0.5 mx-1 mt-[-12px]"
-            :class="isStagePast(debate.stages[idx + 1]?.stage) || isStageActive(debate.stages[idx + 1]?.stage) ? 'bg-primary' : 'bg-gray-200'" />
+            :class="isStagePast(debate.stages[idx + 1]?.stage || '') || isStageActive(debate.stages[idx + 1]?.stage || '') ? 'bg-primary' : 'bg-gray-200'" />
         </template>
       </div>
 

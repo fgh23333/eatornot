@@ -1,4 +1,5 @@
-const BASE = ''
+// 生产环境通过 VITE_API_URL 指向后端地址，开发时为空（走 Vite proxy）
+const BASE = import.meta.env.VITE_API_URL || ''
 
 // 动态获取当前用户 ID（从 localStorage 恢复或使用 demo-user）
 function getUserId(): string {

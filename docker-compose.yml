@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  # ===== 前端 (Vue 3 SPA) =====
+  web:
+    build:
+      context: ./apps/web
+      args:
+        VITE_API_URL: "http://localhost:8001"
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # ===== 后端 (FastAPI) =====
+  api:
+    build: ./apps/api
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./data/eatornot.db
+    volumes:
+      - db-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  db-data:

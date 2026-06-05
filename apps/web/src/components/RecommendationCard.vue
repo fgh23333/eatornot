@@ -21,7 +21,7 @@ function getModeConfig(mode: string) {
 </script>
 
 <template>
-  <Card :class="['cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5', selected ? 'ring-2 ring-orange-500' : '']"
+  <Card :class="'cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5' + (selected ? ' ring-2 ring-orange-500' : '')"
     @click="$emit('select')">
     <CardContent class="p-4 space-y-3">
       <div class="flex items-center justify-between">
@@ -29,7 +29,7 @@ function getModeConfig(mode: string) {
           <span class="text-xl">{{ getModeConfig(plan.mode).icon }}</span>
           <h3 class="font-semibold text-base">{{ plan.title }}</h3>
         </div>
-        <Badge :class="[getModeConfig(plan.mode).bg, getModeConfig(plan.mode).color]" variant="secondary">
+        <Badge :class="(getModeConfig(plan.mode).bg + ' ' + getModeConfig(plan.mode).color)" variant="secondary">
           {{ getModeConfig(plan.mode).label }}
         </Badge>
       </div>
