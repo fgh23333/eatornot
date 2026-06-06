@@ -95,6 +95,3 @@ async def generate_text(system_prompt: str, user_prompt: str) -> str:
 def strip_thought_tags(text: str) -> str:
     """Remove Gemma 4 <thought>...</thought> tags from text."""
     return re.sub(r'<thought>[\s\S]*?</thought>', '', text).strip()
-    except Exception as e:
-        logger.error(f"LLM generate_text failed: {e}")
-        return f"[LLM error: {e}]"

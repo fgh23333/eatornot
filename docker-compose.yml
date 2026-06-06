@@ -6,7 +6,7 @@ services:
     build:
       context: ./apps/web
       args:
-        # 空 = nginx 反向代理 /api → api:8001，浏览器不需要跨域
+        # 空 = nginx 反向代理 /api → api:8000，浏览器不需要跨域
         VITE_API_URL: ""
     ports:
       - "5173:80"
@@ -19,7 +19,7 @@ services:
   api:
     build: ./apps/api
     ports:
-      - "8001:8001"
+      - "8000:8000"
     env_file:
       - .env
     environment:
@@ -29,7 +29,7 @@ services:
     volumes:
       - db-data:/app/data
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
       timeout: 5s
       retries: 5

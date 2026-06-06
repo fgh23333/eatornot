@@ -47,7 +47,7 @@ EatOrNot 不是简单的菜单推荐工具。它通过**多 Agent 圆桌辩论**
 |----|------|
 | **后端** | Python 3.12 + FastAPI |
 | **前端** | Vue 3 + Vite 6 + TypeScript |
-| **LLM** | Cloudflare AI Gateway → Google Gemma 4 |
+| **LLM** | Google Gemini API → Gemma 4 31B |
 | **数据库** | SQLAlchemy + aiosqlite (SQLite) |
 | **Agent 框架** | Google ADK (Agent Development Kit) |
 | **外部数据** | 麦当劳 MCP (Model Context Protocol) |
@@ -61,14 +61,14 @@ EatOrNot 不是简单的菜单推荐工具。它通过**多 Agent 圆桌辩论**
 ```bash
 # 1. 配置环境变量
 cp .env.example .env
-# 编辑 .env，填入 CF_AIG_TOKEN（必填）
+# 编辑 .env，填入 GEMINI_API_KEY（必填）
 
 # 2. 一键启动
 docker compose up -d --build
 
 # 3. 访问
 # 前端: http://localhost:5173
-# 后端: http://localhost:8001/health
+# 后端: http://localhost:8000/health
 ```
 
 nginx 自动代理 `/api` → FastAPI 后端，无需跨域配置。
@@ -79,7 +79,7 @@ nginx 自动代理 `/api` → FastAPI 后端，无需跨域配置。
 # 后端
 cd apps/api
 pip install -r requirements.txt
-uvicorn main:app --host 127.0.0.1 --port 8001
+uvicorn main:app --host 127.0.0.1 --port 8000
 
 # 前端 (另一个终端)
 cd apps/web
@@ -93,7 +93,7 @@ pnpm dev
 
 - **前端**: Cloudflare Pages → 自动构建，绑定 `eatornot-7tp.pages.dev`
 - **后端**: Cloudflare Workers + D1 → `eatornot-api.jimmy120070.workers.dev`
-- **LLM**: Cloudflare AI Gateway → Gemma 4
+- **LLM**: Google Gemini API → Gemma 4 31B
 
 ### 终端点餐（Claude Code）
 
@@ -125,9 +125,8 @@ cp .env.example .env
 
 | 变量 | 必填 | 说明 |
 |------|------|------|
-| `CF_AIG_TOKEN` | ✅ | Cloudflare AI Gateway Token |
-| `CF_AIG_BASE_URL` | ✅ | AI Gateway 兼容端点 URL |
-| `GEMMA_MODEL` | ✅ | Gemma 模型 ID（如 `google-ai-studio/gemma-4-31b-it`） |
+| `GEMINI_API_KEY` | ✅ | Google AI Studio API Key（[获取](https://aistudio.google.com/apikey)） |
+| `GEMINI_MODEL` | ❌ | Gemma 模型 ID（默认 `gemma-4-31b-it`） |
 | `MCD_MCP_TOKEN` | ❌ | 麦当劳 MCP Token（[获取](https://mcp.mcd.cn)，无则用 Mock 数据） |
 | `DATABASE_URL` | ❌ | SQLite 路径（默认 `./data/eatornot.db`） |
 
