@@ -7,13 +7,18 @@
   "sex": "male",
   "goal": "lose_weight",
   "activity_level": "light",
-  "daily_budget": 45.0,
+  "daily_budget": 100.0,
+  "weekly_budget": 300.0,
   "weekly_indulgence_allowance": 2,
   "taste_preferences": ["chicken", "coffee", "spicy"],
   "allergies": [],
+  "dislikes": ["fish"],
+  "preferred_tone": "gentle_friend",
   "meal_schedule": {
     "breakfast": "08:30",
     "lunch": "12:00",
     "dinner": "18:30"
-  }
+  },
+  "onboarding_complete": 1,
+  "mode": "long_term"
 }
