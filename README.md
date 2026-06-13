@@ -49,7 +49,7 @@ EatOrNot 不是简单的菜单推荐工具。它通过**多 Agent 圆桌辩论**
 | **前端** | Vue 3 + Vite 6 + TypeScript |
 | **LLM** | Google Gemini API → Gemma 4 31B |
 | **数据库** | SQLAlchemy + aiosqlite (SQLite) |
-| **Agent 框架** | Google ADK (Agent Development Kit) |
+| **Agent 框架** | 自定义多 Agent 编排 (Gemma 4 Function Calling) |
 | **外部数据** | 麦当劳 MCP (Model Context Protocol) |
 
 ---
@@ -152,7 +152,7 @@ eatornot/
 │   │   ├── services/                 # 业务服务 (18 个)
 │   │   ├── models/                   # Pydantic 数据模型
 │   │   ├── providers/                # 食物数据源抽象层
-│   │   ├── adk_app/                  # Google ADK 集成
+│   │   ├── adk_app/                  # ADK 兼容层 (可选)
 │   │   └── data/                     # Mock 数据
 │   └── web/                          # Vue 3 前端
 │       └── src/
@@ -168,7 +168,7 @@ eatornot/
 │   ├── nutrition_guidelines/         # 膳食指南
 │   ├── safety/                       # 安全规则
 │   └── weight_loss/                  # 减重规则
-├── skills/                           # ADK Skills (5 个)
+├── skills/                           # Agent 领域知识 (5 个)
 ├── scripts/claude-setup/             # 终端点餐安装脚本
 │   ├── skills/meal-order.md          # Claude Code skill
 │   ├── install.ps1                   # 一键安装
@@ -215,7 +215,7 @@ eatornot/
 │                    API 后端 (2 种部署)                        │
 │         Cloudflare Workers (Hono.js)  │  FastAPI (本地/Docker) │
 │         ├─ D1 Database               │  ├─ SQLite             │
-│         ├─ Cron Triggers (3 餐次)     │  ├─ Google ADK Agents  │
+│         ├─ Cron Triggers (3 餐次)     │  ├─ 自定义多 Agent 系统 │
 │         ├─ Web Push (VAPID)           │  └─ McDonalds MCP      │
 │         └─ AI Gateway → Gemma 4      │                        │
 └──────────────────────────────────────────────────────────────┘

@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EatOrNot - Gemma4 Hackathon 路演</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;500;700;900&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/all.min.css">
+    <style>
+        /* === 1. CORE SETUP === */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: #0a0a0a;
+            display: grid;
+            gap: 30px;
+            grid-template-columns: 1fr;
+            margin: 0;
+            min-height: 100vh;
+            place-items: center;
+            padding: 40px 0;
+            font-family: 'Noto Sans SC', 'Urbanist', sans-serif;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: #0f1115;
+            color: #ffffff;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 60px 80px;
+            border: 1px solid #1f2937;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+
+        /* Background Glowing Orbs */
+        .slide-container::before {
+            content: '';
+            position: absolute;
+            top: -200px;
+            right: -100px;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(0, 242, 255, 0.06) 0%, transparent 60%);
+            z-index: 0;
+            pointer-events: none;
+        }
+        .slide-container::after {
+            content: '';
+            position: absolute;
+            bottom: -150px;
+            left: -150px;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, transparent 60%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .slide-container > * { position: relative; z-index: 1; }
+
+        /* === 2. TYPOGRAPHY === */
+        h1, h2, h3 { font-family: 'Noto Sans SC', 'Urbanist', sans-serif; margin: 0; }
+
+        h1 { font-size: 85px; font-weight: 900; color: #ffffff; letter-spacing: -2px; line-height: 1.1; }
+        h1 span { color: #00f2ff; }
+
+        .slide-title {
+            font-size: 42px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 35px;
+            text-align: left;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .slide-title::before {
+            content: '';
+            display: block;
+            width: 8px;
+            height: 42px;
+            background: #00f2ff;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        p, li, td, th { font-size: 20px; line-height: 1.6; color: #9ca3af; margin: 0; }
+        h3 { font-size: 26px; color: #e5e7eb; margin-bottom: 12px; font-weight: 700; }
+        .subtitle { font-size: 24px; color: #6b7280; margin-top: 20px; }
+
+        .content-area {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            width: 100%;
+        }
+
+        /* === 3. LAYOUT MODULES === */
+
+        .title-layout { text-align: center; align-items: center; }
+
+        .two-column { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; width: 100%; align-items: center; }
+        .two-column.tiled { align-items: stretch; }
+        .two-column.tiled > div {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid #1f2937;
+            padding: 35px;
+            border-radius: 16px;
+        }
+
+        .grid-2x2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 22px;
+            width: 100%;
+        }
+        .grid-item {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid #1f2937;
+            padding: 28px;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+        .grid-item .header-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 12px;
+        }
+        .grid-item .header-row i {
+            font-size: 26px;
+            color: #00f2ff;
+            background: rgba(0, 242, 255, 0.1);
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .grid-item strong { color: #ffffff; font-size: 22px; }
+        .grid-item p { font-size: 17px; line-height: 1.5; }
+
+        .tiled-content { display: flex; gap: 25px; width: 100%; align-items: stretch; }
+        .tile {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid #1f2937;
+            padding: 35px 28px;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .tile .icon {
+            font-size: 36px;
+            color: #00f2ff;
+            margin-bottom: 20px;
+            background: rgba(0, 242, 255, 0.1);
+            width: 72px;
+            height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+        }
+
+        .table-layout { width: 100%; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        th, td { padding: 20px; text-align: left; border-bottom: 1px solid #1f2937; }
+        th { background: rgba(0, 242, 255, 0.05); color: #00f2ff; font-weight: 700; font-size: 20px; }
+        th:first-child { border-top-left-radius: 12px; }
+        th:last-child { border-top-right-radius: 12px; }
+        tr:hover td { background: rgba(255, 255, 255, 0.01); }
+
+        .bullet-list { width: 100%; }
+        .bullet-list ul { list-style: none; margin: 0; padding: 0; }
+        .bullet-list li {
+            position: relative;
+            padding-left: 45px;
+            margin-bottom: 18px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 20px 25px 20px 60px;
+            border-radius: 12px;
+            border: 1px solid #1f2937;
+        }
+        .bullet-list i {
+            position: absolute;
+            left: 22px;
+            top: 24px;
+            color: #00f2ff;
+            font-size: 20px;
+        }
+        .bullet-list li strong { color: #ffffff; font-size: 20px; display: block; margin-bottom: 4px; }
+
+        /* Timeline */
+        .timeline-layout { display: flex; justify-content: space-between; position: relative; width: 100%; align-items: stretch; height: 100%; padding-top: 30px; }
+        .timeline-line { position: absolute; top: 90px; left: 0; width: 100%; height: 2px; background: #1f2937; z-index: 0; }
+        .timeline-item { width: 23%; position: relative; text-align: left; }
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            top: 90px;
+            left: 30px;
+            width: 16px;
+            height: 16px;
+            background: #00f2ff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            border: 4px solid #0f1115;
+            z-index: 1;
+        }
+        .timeline-item .content-wrapper { padding-top: 130px; padding-right: 15px; }
+        .timeline-item h3 { color: #00f2ff; font-size: 22px; margin-bottom: 8px; }
+
+        /* Code Block */
+        .code-block {
+            background: #000000;
+            border: 1px solid #1f2937;
+            border-radius: 12px;
+            padding: 22px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 15px;
+            color: #10b981;
+            line-height: 1.6;
+            overflow: hidden;
+        }
+        .code-block .keyword { color: #3b82f6; }
+        .code-block .string { color: #f59e0b; }
+        .code-block .comment { color: #6b7280; }
+        .code-block .highlight { color: #00f2ff; }
+
+        /* Memory Layers */
+        .memory-layers { display: flex; flex-direction: column; gap: 18px; width: 100%; }
+        .memory-layer {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 22px 28px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid #1f2937;
+            border-radius: 14px;
+        }
+        .memory-layer .layer-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            flex-shrink: 0;
+        }
+        .memory-layer .layer-info { flex: 1; }
+        .memory-layer .layer-info strong { color: #ffffff; font-size: 22px; display: block; margin-bottom: 4px; }
+        .memory-layer .layer-info p { font-size: 17px; }
+
+        /* Demo slide */
+        .demo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            width: 100%;
+        }
+        .demo-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid #1f2937;
+            padding: 30px;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+        .demo-card .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(0, 242, 255, 0.15);
+            color: #00f2ff;
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        .demo-card strong { color: #ffffff; font-size: 22px; margin-bottom: 8px; }
+        .demo-card p { font-size: 17px; }
+
+        /* Tech Stack Pills */
+        .tech-pills { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+        .tech-pill {
+            background: rgba(0, 242, 255, 0.08);
+            border: 1px solid rgba(0, 242, 255, 0.2);
+            padding: 8px 18px;
+            border-radius: 24px;
+            font-size: 16px;
+            color: #00f2ff;
+        }
+
+        /* Q&A */
+        .qa-layout { text-align: center; width: 100%; align-self: center; }
+        .qa-layout h2 { font-size: 90px; margin-bottom: 20px; color: #ffffff; font-weight: 900; }
+        .contact-info { margin-top: 40px; display: inline-flex; gap: 40px; background: rgba(255,255,255,0.02); padding: 20px 40px; border-radius: 100px; border: 1px solid #1f2937; }
+        .contact-info span { color: #00f2ff; font-size: 20px; display: flex; align-items: center; gap: 10px; }
+
+        /* Three Plans */
+        .plans-grid { display: flex; gap: 20px; width: 100%; }
+        .plan-card {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid #1f2937;
+            border-radius: 16px;
+            padding: 28px 24px;
+            text-align: center;
+        }
+        .plan-card .plan-icon { font-size: 48px; margin-bottom: 15px; }
+        .plan-card h3 { font-size: 24px; margin-bottom: 10px; }
+        .plan-card p { font-size: 16px; }
+        .plan-card .plan-tag {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ============================================ -->
+<!-- Slide 1: 封面 (5s)                           -->
+<!-- ============================================ -->
+<div class="slide-container" id="slide1">
+    <div class="content-area title-layout">
+        <h1>Eat<span>Or</span>Not</h1>
+        <p class="subtitle" style="font-size: 30px; color: #e5e7eb; margin-top: 30px;">基于 Gemma 4 的多 Agent 饮食决策引擎</p>
+        <p style="color: #6b7280; margin-top: 12px; font-size: 22px;">不替你做决定，帮你做更好的决定</p>
+
+        <div style="margin-top: 70px; display: inline-flex; gap: 50px; border-top: 1px solid #1f2937; padding-top: 35px;">
+            <div>
+                <p style="font-size: 15px; text-transform: uppercase; letter-spacing: 2px; color: #6b7280;">赛道</p>
+                <p style="color: #00f2ff; font-weight: 700; margin-top: 5px;">A - AI Agent</p>
+            </div>
+            <div>
+                <p style="font-size: 15px; text-transform: uppercase; letter-spacing: 2px; color: #6b7280;">团队</p>
+                <p style="color: #ffffff; font-weight: 700; margin-top: 5px;">吃了吗</p>
+            </div>
+            <div>
+                <p style="font-size: 15px; text-transform: uppercase; letter-spacing: 2px; color: #6b7280;">模型</p>
+                <p style="color: #ffffff; font-weight: 700; margin-top: 5px;">Gemma 4 31B</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- Slide 2: 痛点引入 (20s)                       -->
+<!-- ============================================ -->
+<div class="slide-container" id="slide2">
+    <h2 class="slide-title">程序员的"吃"难题</h2>
+    <div class="content-area">
+        <div class="tiled-content">
+            <div class="tile">
+                <div class="icon"><i class="fa-solid fa-clock"></i></div>
+                <h3>🕐 忘记吃饭</h3>
+                <p>高强度编码进入 Flow 状态，彻底模糊时间概念，经常错过正常饭点。</p>
+            </div>
+            <div class="tile">
+                <div class="icon"><i class="fa-solid fa-burger"></i></div>
+                <h3>🍔 情绪性进食</h3>
+                <p>面对 Bug 压力产生补偿性进食欲望，高热量摄入破坏健康目标。</p>
+            </div>
+            <div class="tile">
+                <div class="icon"><i class="fa-solid fa-wallet"></i></div>
+                <h3>💰 预算失控</h3>
+                <p>随意点餐缺乏统筹，隐蔽且频繁的开销导致月度餐费严重超标。</p>
+            </div>
+        </div>
+        <p style="text-align: center; margin-top: 30px; font-size: 22px; color: #e5e7eb;">
+            <strong style="color: #00f2ff;">→ 现有工具只给菜单列表，不理解你的健康目标、预算限制和情绪状态。</strong>
+        </p>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- Slide 3: 产品定位 (20s)                       -->
+<!-- ============================================ -->
+<div class="slide-container" id="slide3">
+    <h2 class="slide-title">核心定位：多 Agent 饮食辩论</h2>
+    <div class="content-area">
+        <p style="margin-bottom: 25px; font-size: 20px;">传统工具是单维度推荐排序算法。EatOrNot 部署 8 个专业 Agent 从不同角度辩论，给出有理有据的饮食建议。</p>
+        <div class="table-layout">
+            <table>
+                <thead>
+                    <tr>
+                        <th>对比维度</th>
+                        <th>传统外卖平台</th>
+                        <th>EatOrNot 智能体</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="color: #ffffff; font-weight: 700;">决策大脑</td>
+                        <td>单一推荐排序算法</td>
+                        <td><span style="color: #00f2ff;">8 个专业 Agent</span> 并行分析</td>
+                    </tr>
+                    <tr>
+                        <td style="color: #ffffff; font-weight: 700;">评估标准</td>
+                        <td>仅看价格、距离、销量</td>
+                        <td>健康 + 预算 + 情绪 + 安全</td>
+                    </tr>
+                    <tr>
+                        <td style="color: #ffffff; font-weight: 700;">个性化</td>
+                        <td>千人一面的通用推荐</td>
+                        <td><span style="color: #00f2ff;">学习你的饮食习惯</span>，越用越懂你</td>
+                    </tr>
+                    <tr>
+                        <td style="color: #ffffff; font-weight: 700;">业务闭环</td>
+                        <td>推荐完即结束，需手动操作</td>
+                        <td>分析 → 辩论 → <span style="color: #00f2ff;">自主下单闭环</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- Slide 4: 系统架构全景 (40s) ⭐               -->
+<!-- ============================================ -->
+<div class="slide-container" id="slide4">
+    <h2 class="slide-title">多 Agent 协作架构</h2>
+    <div class="content-area">
+        <div class="grid-2x2">
+            <div class="grid-item">
+                <div class="header-row">
+                    <i class="fa-solid fa-microchip"></i>
+                    <strong>① Orchestrator 智能调度</strong>
+                </div>
+                <p>基于 Gemma 4 Function Calling 分析用户输入，从 8 个候选 Agent 中<strong style="color:#00f2ff">动态唤醒 3-5 个</strong>最相关的主体。LLM 失败时自动降级到关键词匹配。</p>
+            </div>
+
+            <div class="grid-item">
+                <div class="header-row">
+                    <i class="fa-solid fa-bolt"></i>
+                    <strong>② Agent 并行分析</strong>
+                </div>
+                <p>减脂、营养、预算、食欲、时间、安全等 Agent 通过 <code style="color:#00f2ff">asyncio.gather()</code> 并发执行，极速收集多维数据，大幅降低决策延迟。</p>
+            </div>
+
+            <div class="grid-item">
+                <div class="header-row">
+                    <i class="fa-solid fa-comments"></i>
+                    <strong>③ Debate 圆桌辩论</strong>
+                </div>
+                <p>经历 R1 初始意见 → R2 发现冲突 → R3 形成妥协 → R4 最终投票，<strong style="color:#00f2ff">从矛盾需求中寻找帕累托最优解</strong>。</p>
+            </div>
+
+            <div class="grid-item">
+                <div class="header-row">
+                    <i class="fa-solid fa-clipboard-check"></i>
+                    <strong>④ 三方案输出 + 下单闭环</strong>
+                </div>
+                <p>产出 💪自律 / 💰省钱 / 🍔犒劳 三套差异化方案。用户选定后通过麦当劳 MCP <strong style="color:#00f2ff">一键创建订单</strong>，全程无需离开系统。</p>
+            </div>
+        </div>
+        <p style="text-align: center; margin-top: 18px; font-size: 18px; color: #6b7280;">
+            每次决策 ≈ <strong style="color:#00f2ff">10-12 次 LLM 调用</strong>，不是单次 Prompt 工程
+        </p>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- Slide 5: Gemma 4 深度利用 — Function Calling (40s) ⭐ -->
+<!-- ============================================ -->
+<div class="slide-container" id="slide5">
+    <h2 class="slide-title">Gemma 4: Native Function Calling</h2>
+    <div class="content-area">
+        <div class="two-column tiled">
+            <div>
+                <h3 style="margin-top: 0;">拒绝硬编码，拥抱动态路由</h3>
+                <p style="margin-bottom: 18px; font-size: 18px;">Orchestrator 不用 IF-ELSE 关键词匹配，而是利用 <strong>Gemma 4 原生工具调用能力</strong>，让大模型自主分析复杂情绪场景并选择 Agent 组合。</p>
+                <p style="font-size: 18px; margin-bottom: 20px;">例如："很累想吃好的，但在减肥" → 同时激活 <strong style="color:#00f2ff">减脂 + 预算 + 食欲</strong>三个 Agent。</p>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <span class="tech-pill">Profile</span>
+                    <span class="tech-pill">WeightLoss</span>
+                    <span class="tech-pill">Nutrition</span>
+                    <span class="tech-pill">Budget</span>
+                    <span class="tech-pill">Craving</span>
+                    <span class="tech-pill">Safety</span>
+                    <span class="tech-pill">TimeContext</span>
+                    <span class="tech-pill">FutureSim</span>
+                </div>
+            </div>
+            <div class="code-block">
+                <span class="comment"># Orchestrator 真实执行日志</span><br><br>
+                <span class="keyword">[ToolCalling]</span> 候选 Agent 池:<br>
+                [<span class="string">'profile'</span>, <span class="string">'weight_loss'</span>, <span class="string">'nutrition'</span>,<br>
+                &nbsp;<span class="string">'budget'</span>, <span class="string">'craving'</span>, <span class="string">'safety'</span>]<br><br>
+                <span class="keyword">[Function Return]</span> 动态决策:<br>
+                <span class="keyword">selected</span>: [<span class="string">'weight_loss'</span>, <span class="string">'budget'</span>,<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="string">'craving'</span>]<br>
+                <span class="keyword">reason</span>: <span class="string">"减脂目标+预算限制+疲劳状态"</span><br><br>
+                <span class="comment"># MCP Tool Calling 闭环</span><br>
+                <span class="highlight">search_menu</span>(<span class="string">"鸡腿堡"</span>) → 获取餐品<br>
+                <span class="highlight">get_nutrition</span>(<span class="string">"big_mac"</span>) → 563kcal<br>
+                <span class="highlight">calculate_price</span>(items) → ¥42<br>
+                <span class="highlight">create_order</span>(items) → <span class="keyword">Success</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- Slide 6: Gemma 4 深度利用 — Agent Memory (30s) ⭐ -->
+<!-- ============================================ -->
+<div class="slide-container" id="slide6">
+    <h2 class="slide-title">Agent Memory — 学习你的饮食习惯</h2>
+    <div class="content-area">
+        <div class="two-column" style="align-items: stretch;">
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div class="memory-layer">
+                    <div class="layer-icon" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
+                        <i class="fa-solid fa-comment-dots"></i>
+                    </div>
+                    <div class="layer-info">
+                        <strong>短期记忆</strong>
+                        <p>当前对话上下文（内存）— 保持多轮对话连贯</p>
+                    </div>
+                </div>
+                <div class="memory-layer">
+                    <div class="layer-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                        <i class="fa-solid fa-utensils"></i>
+                    </div>
+                    <div class="layer-info">
+                        <strong>中期记忆</strong>
+                        <p>用餐记录 + 偏好反馈（SQLite）— 追踪每日营养摄入</p>
+                    </div>
+                </div>
+                <div class="memory-layer">
+                    <div class="layer-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                        <i class="fa-solid fa-brain"></i>
+                    </div>
+                    <div class="layer-info">
+                        <strong>长期记忆</strong>
+                        <p>行为模式 + 习惯画像（SQLite）— 检测饮食偏好模式</p>
+                    </div>
+                </div>
+            </div>
+            <div class="code-block" style="display: flex; flex-direction: column; font-size: 13px; line-height: 1.5; padding: 18px; overflow: hidden;">
+                <span class="comment"># Memory 真实调用链路</span><br>
+                <span class="keyword">[MemoryService]</span> 召回偏好:<br>
+                &nbsp;&nbsp;taste=[<span class="string">"辣味"</span>,<span class="string">"高蛋白"</span>]<br>
+                &nbsp;&nbsp;avoid=[<span class="string">"油炸"</span>]<br>
+                &nbsp;&nbsp;budget_mode=<span class="string">"工作日节省"</span><br>
+                <span class="keyword">[MemoryService]</span> 用餐模式(30天):<br>
+                &nbsp;&nbsp;skip_rate=<span class="highlight">0.23</span> | indulge_left=<span class="highlight">1</span><br>
+                <span class="keyword">[Orchestrator]</span> 减脂Agent ×1.3, 预算上限 ¥35
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- Slide 7: 圆桌辩论引擎 (30s) ⭐               -->
+<!-- ============================================ -->
+<div class="slide-container" id="slide7">
+    <h2 class="slide-title">4 阶段圆桌辩论引擎</h2>
+    <div class="content-area">
+        <div class="timeline-layout">
+            <div class="timeline-line"></div>
+
+            <div class="timeline-item">
+                <div class="content-wrapper">
+                    <h3>R1: 初始立场</h3>
+                    <p>各 Agent 基于数据与知识库陈述独立分析意见。如：减脂Agent 认为热量超标，预算Agent 发现超支。</p>
+                </div>
+            </div>
+            <div class="timeline-item">
+                <div class="content-wrapper">
+                    <h3>R2: 发现冲突</h3>
+                    <p>🔥减脂："热量超限！"<br>🍫食欲："但用户极度疲劳，需要碳水满足感。"<br>Gemma 4 识别这些矛盾。</p>
+                </div>
+            </div>
+            <div class="timeline-item">
+                <div class="content-wrapper">
+                    <h3>R3: 形成妥协</h3>
+                    <p>主持人综合各方意见寻找帕累托最优解："高蛋白单品组合 + 无糖可乐，¥22 内搞定。"</p>
+                </div>
+            </div>
+            <div class="timeline-item">
+                <div class="content-wrapper">
+                    <h3>R4: 最终投票</h3>
+                    <p>各 Agent 对方案投票 (approve/warn/reject)，产出三套差异化方案供用户选择。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- Slide 8: 技术栈 & 创新点 (20s)                -->
+<!-- ============================================ -->
+<div class="slide-container" id="slide8">
+    <h2 class="slide-title">技术栈 & 三大核心创新</h2>
+    <div class="content-area">
+        <div class="tiled-content">
+            <div class="tile">
+                <div class="icon"><i class="fa-solid fa-brain"></i></div>
+                <h3>🧠 LLM 驱动编排器</h3>
+                <p>摒弃 Rule-based 规则引擎，利用 Gemma 4 Function Calling 智能调度专业 Agent，每次决策 10-12 次 LLM 调用。</p>
+            </div>
+            <div class="tile">
+                <div class="icon"><i class="fa-solid fa-scale-balanced"></i></div>
+                <h3>💬 多 Agent 辩论</h3>
+                <p>不只是简单投票。4 阶段辩论：发现冲突 → 妥协 → 投票，从矛盾需求中计算帕累托最优解。</p>
+            </div>
+            <div class="tile">
+                <div class="icon"><i class="fa-solid fa-bullseye"></i></div>
+                <h3>🔧 Tool Calling 闭环</h3>
+                <p>从营养查询到价格计算再到自主下单，全链路 MCP 接入。麦当劳 MCP 真实数据 + Mock 降级保障。</p>
+            </div>
+        </div>
+        <div class="tech-pills" style="justify-content: center; margin-top: 25px;">
+            <span class="tech-pill"><i class="fa-brands fa-google"></i> Gemma 4 31B</span>
+            <span class="tech-pill">FastAPI</span>
+            <span class="tech-pill">Vue 3 + TypeScript</span>
+            <span class="tech-pill">麦当劳 MCP</span>
+            <span class="tech-pill">SQLite</span>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- Slide 9: 未来扩展 (30s)                      -->
+<!-- ============================================ -->
+<div class="slide-container" id="slide9">
+    <h2 class="slide-title">未来规划路线图</h2>
+    <div class="content-area">
+        <div class="tiled-content">
+            <div class="tile">
+                <div class="icon"><i class="fa-solid fa-rocket"></i></div>
+                <h3 style="margin-bottom: 12px;">短期 <span style="font-size:17px;color:#6b7280;font-weight:normal">(1-2 月)</span></h3>
+                <p>📸 Gemini Vision 拍照识别卡路里<br>📱 PWA 移动端适配<br>🧪 pytest 测试覆盖</p>
+            </div>
+            <div class="tile">
+                <div class="icon"><i class="fa-solid fa-layer-group"></i></div>
+                <h3 style="margin-bottom: 12px;">中期 <span style="font-size:17px;color:#6b7280;font-weight:normal">(3-6 月)</span></h3>
+                <p>🧠 ChromaDB RAG 语义营养检索<br>📊 周/月健康趋势分析与报告<br>👥 多用户认证与数据隔离</p>
+            </div>
+            <div class="tile" style="border-color: #00f2ff; background: rgba(0, 242, 255, 0.04);">
+                <div class="icon"><i class="fa-solid fa-map-location-dot"></i></div>
+                <h3 style="color: #00f2ff; margin-bottom: 12px;">长期愿景</h3>
+                <p>成为程序员的 <strong>AI 饮食健康管家</strong> — 不只帮你选吃什么，而是长期追踪营养状态，在你放纵时提供最理性的健康守护。</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- Slide 10: Q&A (10s)                          -->
+<!-- ============================================ -->
+<div class="slide-container" id="slide10">
+    <div class="content-area qa-layout">
+        <h2>谢谢！Q&A</h2>
+        <p class="subtitle" style="font-size: 26px; color: #e5e7eb; margin-bottom: 30px;">EatOrNot — 基于 Gemma 4 的多 Agent 饮食智能体</p>
+        <p style="font-size: 22px; color: #9ca3af; margin-bottom: 10px;">"不替你做决定，帮你做更好的决定"</p>
+
+        <div class="contact-info">
+            <span><i class="fa-brands fa-github"></i> fgh23333/eatornot</span>
+            <span><i class="fa-brands fa-youtube"></i> Demo 视频已上线</span>
+        </div>
+        <p style="margin-top: 50px; color: #6b7280;">代码与详细架构均已开源 · PR: Gemma4-Hackathon-ShangHai #49</p>
+    </div>
+</div>
+
+</body>
+</html>

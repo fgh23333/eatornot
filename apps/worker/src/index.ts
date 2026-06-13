@@ -8,6 +8,8 @@ type Bindings = {
   VAPID_PUBLIC_KEY?: string
   VAPID_PRIVATE_KEY?: string
   VAPID_SUBJECT?: string  // e.g. "mailto:you@example.com"
+  MCD_MCP_TOKEN?: string  // 麦当劳 MCP Bearer Token
+  MCD_MCP_URL?: string    // MCP 服务器地址 (默认 https://mcp.mcd.cn)
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -19,17 +21,19 @@ app.use('*', cors())
 app.get('/health', (c) => c.json({
   status: 'ok',
   app: 'EatOrNot',
-  mock_mcp: true,
+  mcp_enabled: !!c.env.MCD_MCP_TOKEN,
   platform: 'cloudflare-workers',
 }))
 
 // ============ Provider Status ============
 app.get('/api/provider/status', (c) => c.json({
-  active_provider: 'Mock (Workers)',
-  provider_mode: 'mock',
-  fallback_available: false,
-  mcd_mcp_configured: false,
-  message: 'Running on Cloudflare Workers with mock data',
+  active_provider: c.env.MCD_MCP_TOKEN ? 'McDonalds MCP' : 'Mock (Workers)',
+  provider_mode: c.env.MCD_MCP_TOKEN ? 'mcp' : 'mock',
+  fallback_available: true,
+  mcd_mcp_configured: !!c.env.MCD_MCP_TOKEN,
+  message: c.env.MCD_MCP_TOKEN
+    ? 'Running with real McDonald\'s MCP data'
+    : 'Running on Cloudflare Workers with mock data (set MCD_MCP_TOKEN for real data)',
 }))
 
 // ============ Profile ============
@@ -185,26 +189,184 @@ app.get('/api/demo/learning', (c) => c.json({ learning_points: 5, total_observat
 app.get('/api/demo/metrics', (c) => c.json({ total_decisions: 3, avg_satisfaction: 4.2 }))
 
 // ============ Store Search ============
-app.get('/api/stores/search', (c) => {
+app.get('/api/stores/search', async (c) => {
   const city = c.req.query('city') || '北京'
-  const keyword = c.req.query('keyword') || ''
-  const mockStores = [
-    { storeCode: '1101001', storeName: `${city}王府井餐厅`, address: `${city}市东城区王府井大街88号`, distance: '0.5km', beCode: '1101001' },
-    { storeCode: '1101002', storeName: `${city}西单餐厅`, address: `${city}市西城区西单北大街120号`, distance: '1.2km', beCode: '1101002' },
-    { storeCode: '1101003', storeName: `${city}三里屯餐厅`, address: `${city}市朝阳区三里屯路19号`, distance: '2.1km', beCode: '1101003' },
-    { storeCode: '1101004', storeName: `${city}国贸餐厅`, address: `${city}市朝阳区建国门外大街1号`, distance: '3.5km', beCode: '1101004' },
-    { storeCode: '1101005', storeName: `${city}望京餐厅`, address: `${city}市朝阳区望京西路`, distance: '4.8km', beCode: '1101005' },
-    { storeCode: '1101006', storeName: `${city}中关村餐厅`, address: `${city}市海淀区中关村大街`, distance: '5.3km', beCode: '1101006' },
-  ]
-  // Filter by keyword if provided
-  const filtered = keyword
-    ? mockStores.filter(s => s.storeName.includes(keyword) || s.address.includes(keyword))
-    : mockStores
-  return c.json({ stores: filtered, total: filtered.length, city, is_mock: true })
+  const keyword = c.req.query('keyword') || '麦当劳'
+
+  // 优先调 MCP 真实数据
+  const mcpResult = await callMcpTool(c.env, 'query-nearby-stores', {
+    beType: 1, searchType: 2, city, keyword,
+  })
+
+  if (mcpResult?.success && mcpResult?.data?.length > 0) {
+    const stores = mcpResult.data.map((s: any) => ({
+      storeCode: s.storeCode,
+      storeName: s.storeName,
+      address: s.address,
+      distance: s.distance < 1000 ? `${s.distance}m` : `${(s.distance / 1000).toFixed(1)}km`,
+      beCode: s.storeCode,
+      businessStatus: s.businessStatus,
+      businessStartTime: s.businessStartTime,
+      businessEndTime: s.businessEndTime,
+      reservation: s.reservation,
+    }))
+    return c.json({ stores, total: stores.length, city, is_mock: false })
+  }
+
+  // MCP 失败 → 降级到 Mock
+  return c.json(mockStoresFallback(city, keyword))
 })
 
+// ============ Store Meals ============
+app.get('/api/stores/:storeCode/meals', async (c) => {
+  const storeCode = c.req.param('storeCode')
+
+  const mcpResult = await callMcpTool(c.env, 'query-meals', {
+    storeCode, orderType: 1, beType: 1,
+  })
+
+  if (mcpResult?.success && mcpResult?.data) {
+    const mealsData: Record<string, any> = mcpResult.data.meals || {}
+    const categories: any[] = mcpResult.data.categories || []
+
+    // 建立 code → category 映射
+    const codeToCategory: Record<string, string> = {}
+    for (const cat of categories) {
+      for (const m of (cat.meals || [])) {
+        codeToCategory[m.code] = cat.name
+      }
+    }
+
+    const items = Object.entries(mealsData).map(([code, m]: [string, any]) => ({
+      item_code: code,
+      name: m.name,
+      image: m.image,
+      price: parseFloat(m.currentPrice) || 0,
+      category: codeToCategory[code] || '其他',
+    }))
+
+    return c.json({ items, categories: categories.map((c: any) => c.name), storeCode, is_mock: false })
+  }
+
+  // 降级到空菜单
+  return c.json({ items: [], categories: [], storeCode, is_mock: true })
+})
+
+// ============ Today Status ============
+app.get('/api/today/status', (c) => {
+  const today = new Date().toISOString().split('T')[0]
+  return c.json({
+    date: today,
+    meals_count: 2,
+    total_calories: 850,
+    total_spent: 38,
+    meals: [
+      {
+        id: 'meal-1',
+        user_id: getUserIdFromCtx(c),
+        timestamp: `${today}T08:30:00`,
+        meal_type: 'breakfast',
+        items: [
+          { name: '猪柳麦满分', item_code: 'M010', category: 'burger', price: 14, calories: 350, protein: 18, fat: 14, carbohydrate: 30, sodium: 680, tags: [] },
+          { name: '美式咖啡', item_code: 'M011', category: 'drink', price: 10, calories: 5, protein: 0, fat: 0, carbohydrate: 1, sodium: 5, tags: ['零卡'] },
+        ],
+        total_price: 24,
+        total_calories: 355,
+        total_protein: 18,
+        total_fat: 14,
+        total_carbs: 31,
+        total_sodium: 685,
+        plan_mode: 'disciplined',
+        satisfaction: 4,
+        notes: '',
+      },
+      {
+        id: 'meal-2',
+        user_id: getUserIdFromCtx(c),
+        timestamp: `${today}T12:15:00`,
+        meal_type: 'lunch',
+        items: [
+          { name: '板烧鸡腿堡', item_code: 'M001', category: 'burger', price: 22, calories: 410, protein: 25, fat: 12, carbohydrate: 45, sodium: 750, tags: ['高蛋白'] },
+          { name: '玉米杯', item_code: 'M002', category: 'side', price: 8, calories: 80, protein: 2, fat: 1, carbohydrate: 18, sodium: 50, tags: ['低脂'] },
+        ],
+        total_price: 30,
+        total_calories: 490,
+        total_protein: 27,
+        total_fat: 13,
+        total_carbs: 63,
+        total_sodium: 800,
+        plan_mode: 'disciplined',
+        satisfaction: null,
+        notes: '',
+      },
+    ],
+  })
+})
+
+// ============ Decision ============
+app.post('/api/decision', async (c) => {
+  let body: any = {}
+  try { body = await c.req.json() } catch {}
+  const message = body.message || body.trigger_reason || '帮我选午餐'
+  const apiKey = c.env.GEMINI_API_KEY
+
+  if (apiKey) {
+    try {
+      const recommendation = await callGemini(apiKey, message, 'quick', c.env.AI_GATEWAY_ID)
+      return c.json(recommendation)
+    } catch {
+      // fallback to mock
+    }
+  }
+  return c.json(mockRecommend(message))
+})
+
+// ============ Reminders Actions ============
+app.post('/api/reminders/:id/accept', (c) => c.json({ success: true }))
+app.post('/api/reminders/:id/snooze', (c) => c.json({ success: true }))
+app.post('/api/reminders/:id/dismiss', (c) => c.json({ success: true }))
+
 // ============ Plan ============
-app.post('/api/plan/refine', (c) => c.json({ error: 'Plan refine not available on Workers' }))
+app.post('/api/plan/refine', async (c) => {
+  let body: any = {}
+  try { body = await c.req.json() } catch {}
+  const planId = body.plan_id || 'plan-1'
+  const message = body.message || ''
+  const apiKey = c.env.GEMINI_API_KEY
+
+  if (apiKey) {
+    try {
+      const recommendation = await callGemini(apiKey, message || '帮我调整方案', 'quick', c.env.AI_GATEWAY_ID)
+      if (recommendation.plans && recommendation.plans.length > 0) {
+        const refined = recommendation.plans[0]
+        refined.id = planId
+        refined.version = 2
+        return c.json({
+          success: true,
+          plan: refined,
+          change_log: [{ version: 2, what_changed: message || '方案已调整', impact: '已根据您的要求重新搭配' }],
+        })
+      }
+    } catch {}
+  }
+  return c.json({
+    success: true,
+    plan: {
+      id: planId, version: 2,
+      title: '💪 调整方案', mode: 'disciplined',
+      items: [
+        { name: '板烧鸡腿堡', item_code: 'M001', category: 'burger', price: 22, calories: 410, protein: 25, fat: 12, carbohydrate: 45, sodium: 750, tags: ['高蛋白'] },
+        { name: '玉米杯', item_code: 'M002', category: 'side', price: 8, calories: 80, protein: 2, fat: 1, carbohydrate: 18, sodium: 50, tags: ['低脂'] },
+        { name: '无糖可乐', item_code: 'M003', category: 'drink', price: 7, calories: 0, protein: 0, fat: 0, carbohydrate: 0, sodium: 15, tags: ['零卡'] },
+      ],
+      estimated_price: 37, estimated_calories: 490, protein: 27, fat: 13, carbohydrate: 63, sodium: 815,
+      budget_impact: '占日预算74%', calorie_impact: '占日热量24%', indulgence_impact: '低',
+      pros: ['高蛋白', '低热量'], cons: ['调整后方案'],
+      agent_votes: [], safety_warnings: [], final_reason: '已根据您的要求调整',
+    },
+    change_log: [{ version: 2, what_changed: message || '方案已调整', impact: 'Mock 调整' }],
+  })
+})
 
 // ============ Order ============
 app.post('/api/order/create', async (c) => {
@@ -229,6 +391,68 @@ app.get('/api/balance', (c) => c.json({ mode: 'balanced', scores: { health: 70, 
 
 // ============ Helpers ============
 
+/** MCP Streamable HTTP: JSON-RPC POST to MCP server, returns parsed data or null */
+async function callMcpTool(env: Bindings, toolName: string, args: Record<string, any>): Promise<any> {
+  const url = env.MCD_MCP_URL || 'https://mcp.mcd.cn'
+  const token = env.MCD_MCP_TOKEN
+  if (!token) return null  // 无 token → 返回 null → 调用方走 mock 降级
+
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json, text/event-stream',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: { name: toolName, arguments: args },
+      }),
+    })
+
+    if (!resp.ok) {
+      console.error(`MCP ${toolName} error: ${resp.status}`)
+      return null
+    }
+
+    const result: any = await resp.json()
+    // MCP 返回 { result: { content: [{ type: 'text', text: '...' }] } }
+    const text = result?.result?.content?.[0]?.text
+    if (!text) return null
+
+    // 直接尝试 parse
+    try { return JSON.parse(text) }
+    catch {
+      // MCP 可能返回 说明文字 + 嵌套 JSON 字符串的混合体
+      // 找第一个 {"success" 开头的 JSON 对象
+      const jsonIdx = text.indexOf('{"success"')
+      if (jsonIdx >= 0) {
+        try { return JSON.parse(text.substring(jsonIdx)) }
+        catch {
+          // 可能还有转义 — 尝试找最后一个 } 结束
+          let depth = 0, start = jsonIdx
+          for (let i = jsonIdx; i < text.length; i++) {
+            if (text[i] === '{') depth++
+            else if (text[i] === '}') depth--
+            if (depth === 0 && i > start) {
+              try { return JSON.parse(text.substring(start, i + 1)) }
+              catch { break }
+            }
+          }
+        }
+      }
+      console.error(`MCP ${toolName}: could not parse response text (length=${text.length})`)
+      return null
+    }
+  } catch (err) {
+    console.error(`MCP ${toolName} failed:`, err)
+    return null
+  }
+}
+
 function defaultProfile(userId: string) {
   return {
     user_id: userId, name: 'Demo用户', height_cm: 170, weight_kg: 65,
@@ -238,6 +462,26 @@ function defaultProfile(userId: string) {
     preferred_tone: 'gentle_friend', meal_schedule: {},
     onboarding_complete: true, mode: 'quick',
   }
+}
+
+/** Mock 门店数据降级 */
+function mockStoresFallback(city: string, keyword: string) {
+  const stores = [
+    { storeCode: '1101001', storeName: `${city}王府井餐厅`, address: `${city}市东城区王府井大街88号`, distance: '0.5km', beCode: '1101001', businessStatus: true, businessStartTime: '06:00', businessEndTime: '23:59' },
+    { storeCode: '1101002', storeName: `${city}西单餐厅`, address: `${city}市西城区西单北大街120号`, distance: '1.2km', beCode: '1101002', businessStatus: true, businessStartTime: '06:00', businessEndTime: '23:59' },
+    { storeCode: '1101003', storeName: `${city}三里屯餐厅`, address: `${city}市朝阳区三里屯路19号`, distance: '2.1km', beCode: '1101003', businessStatus: true, businessStartTime: '07:00', businessEndTime: '22:00' },
+    { storeCode: '1101004', storeName: `${city}国贸餐厅`, address: `${city}市朝阳区建国门外大街1号`, distance: '3.5km', beCode: '1101004', businessStatus: true, businessStartTime: '06:00', businessEndTime: '23:00' },
+    { storeCode: '1101005', storeName: `${city}望京餐厅`, address: `${city}市朝阳区望京西路`, distance: '4.8km', beCode: '1101005', businessStatus: true, businessStartTime: '07:00', businessEndTime: '22:30' },
+    { storeCode: '1101006', storeName: `${city}中关村餐厅`, address: `${city}市海淀区中关村大街`, distance: '5.3km', beCode: '1101006', businessStatus: true, businessStartTime: '06:30', businessEndTime: '23:00' },
+  ]
+  const filtered = keyword
+    ? stores.filter(s => s.storeName.includes(keyword) || s.address.includes(keyword))
+    : stores
+  return { stores: filtered, total: filtered.length, city, is_mock: true }
+}
+
+function getUserIdFromCtx(c: any): string {
+  return c.req.query('user_id') || 'demo-user'
 }
 
 async function callGemini(apiKey: string, message: string, mode: string, gatewayId?: string): Promise<any> {

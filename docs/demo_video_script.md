@@ -234,7 +234,7 @@
 > 🍔 **EatOrNot**
 > 面向开发者的终端饮食智能体
 > github.com/fgh23333/eatornot
-> Powered by Google Gemma 4 + ADK
+> Powered by Google Gemma 4
 
 ---
 

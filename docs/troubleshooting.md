@@ -1,6 +1,6 @@
 # EatOrNot 踩坑记录
 
-## 1. Google ADK MCP 工具调用失败
+## 1. MCP 工具调用失败（ADK 兼容层踩坑）
 
 ### 问题描述
 
@@ -289,7 +289,7 @@ async def safe_mcp_call(tool_name: str, args: dict = None):
 ```txt
 # requirements.txt
 mcp>=1.27.0          # MCP 官方 SDK
-google-adk>=2.1.0    # Google ADK（可选）
+google-adk>=2.1.0    # Google ADK（可选兼容层，主流程未使用）
 fastapi>=0.100.0
 pydantic>=2.0.0
 ```

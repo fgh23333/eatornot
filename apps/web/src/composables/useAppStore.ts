@@ -66,7 +66,7 @@ fetchProfile(getUserId())
       // Backend says onboarding incomplete — clear stale cache, go back to onboarding
       localStorage.removeItem('eatornot_profile')
       localStorage.removeItem('eatornot_mode')
-      phase.value = 'landing'
+      phase.value = 'mode_selection'
     }
   })
   .catch(() => {})

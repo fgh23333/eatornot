@@ -2,7 +2,7 @@
 
 ## 产品定位
 
-**双模式多 Agent 饮食决策助手** — 基于 Google ADK 的智能饮食决策系统
+**双模式多 Agent 饮食决策助手** — 基于 Gemma 4 Function Calling 的智能饮食决策系统
 
 不是麦当劳 MCP 包装器，而是一个完整的营养、预算、情绪管理决策平台。
 
@@ -30,11 +30,11 @@
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                     ADK Agent 决策层                             │
+│                     多 Agent 决策层                             │
 │                                                                  │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │              Google ADK Root Agent                        │   │
-│  │         (eatornot_root_agent, Gemini 2.0 Flash)           │   │
+│  │              SupervisorAgent (顶层编排)                     │   │
+│  │         (Gemma 4 Function Calling 智能调度)               │   │
 │  └──────────────────────────────────────────────────────────┘   │
 │                              │                                   │
 │          ┌───────────────────┼───────────────────┐              │
@@ -59,9 +59,9 @@
 
 ## 核心概念
 
-### ADK Skill vs MCP
+### Agent 领域知识 vs MCP
 
-| 维度 | ADK Skill | MCP |
+| 维度 | 领域知识 (Skills) | MCP |
 |------|-----------|-----|
 | **定义** | 领域知识包 | 外部服务连接器 |
 | **内容** | 指令、规则、参考文档 | API 调用、数据查询 |
@@ -109,27 +109,26 @@ FoodProvider (抽象接口)
 
 ## Agent 架构
 
-### ADK Root Agent
+### 自定义 Agent 编排架构
 
 ```python
-root_agent = Agent(
-    name="eatornot_root_agent",
-    model="gemini-2.0-flash",
-    instruction=SYSTEM_INSTRUCTION,  # 包含所有 Skills 指令
-    tools=[
-        # FoodProvider 工具
-        FunctionTool(search_menu),
-        FunctionTool(get_nutrition),
-        FunctionTool(calculate_price),
-        FunctionTool(create_order_draft),
-        FunctionTool(confirm_order),
-        # MCP 工具
-        FunctionTool(mcd_list_nutrition_foods),
-        FunctionTool(mcd_query_nearby_stores),
-        FunctionTool(mcd_calculate_price),
-        FunctionTool(mcd_create_order),
-    ],
-)
+# 主流程：自定义多 Agent 编排 (非 ADK)
+# 各 Agent 继承 BaseAgent，通过 llm_client 直连 Gemma 4 API
+
+class BaseAgent(ABC):
+    async def run(self, context: dict) -> AgentResult: ...
+    async def _try_llm(self, system, user, schema) -> dict | None:
+        return await generate_json(system, user, schema)
+
+# Orchestrator: Gemma 4 Function Calling 智能调度
+# → 从 8 个 Agent 中动态选择 3-5 个
+# → asyncio.gather() 并行执行
+# → LLM 失败自动降级到关键词匹配
+
+# DebateEngine: 4 阶段辩论 (R1→R2→R3→R4)
+# → LLM 生成辩论内容，算法兜底
+
+# ADK 兼容层 (adk_app/) 保留用于未来对接 Google 生态
 ```
 
 ### Skills（领域知识）
@@ -149,7 +148,7 @@ skills/
 - 输出指导
 - 示例
 
-### 传统 Agent（兼容层）
+### Agent 目录（核心实现）
 
 ```
 agents/
@@ -345,12 +344,12 @@ class ActivePlan(BaseModel):
 
 | 层级 | 技术 | 版本 |
 |------|------|------|
-| Agent 框架 | Google ADK | 2.1.0 |
+| Agent 框架 | 自定义多 Agent 编排 (Gemma 4 Function Calling) | custom |
 | Backend | Python + FastAPI | 3.12, 0.136 |
-| Frontend | React + Vite + TypeScript | 19, 6 |
-| LLM | Gemini 2.0 Flash | via ADK |
+| Frontend | Vue 3 + Vite + TypeScript | 3.5, 6 |
+| LLM | Gemma 4 31B (via OpenAI 兼容协议) | gemma-4-31b-it |
 | MCP | McDonald's MCP | Mock fallback |
-| 数据库 | SQLite | 待接入 |
+| 数据库 | SQLite + SQLAlchemy | 2.0 |
 
 ---
 
